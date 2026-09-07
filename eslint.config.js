@@ -20,17 +20,27 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["packages/**/src/**/*.ts", "evals/runner/**/*.ts", "evals/scorers/**/*.ts"],
+    files: [
+      "packages/**/src/**/*.ts",
+      "packages/**/scripts/**/*.ts",
+      "packages/**/test/**/*.ts",
+      "evals/runner/**/*.ts",
+      "evals/scorers/**/*.ts",
+    ],
     languageOptions: {
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["packages/*/scripts/*.ts"],
-        },
+        project: ["./tsconfig.eslint.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",
+    },
+  },
+  {
+    files: ["**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
 );
