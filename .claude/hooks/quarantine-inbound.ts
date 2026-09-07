@@ -86,7 +86,11 @@ async function main(): Promise<void> {
 
   const tool = hook.tool_name ?? "";
   const input = hook.tool_input ?? {};
-  const ledger = createTaintLedger(join(root, ".claude/.taint-ledger.jsonl"));
+  // DEAL_DESK_TAINT_LEDGER lets the eval injection-harness point the hook at the
+  // same ledger it populated. Defaults to the session ledger.
+  const ledgerPath =
+    process.env.DEAL_DESK_TAINT_LEDGER ?? join(root, ".claude/.taint-ledger.jsonl");
+  const ledger = createTaintLedger(ledgerPath);
 
   const candidates = candidateStrings(tool, input);
   for (const value of candidates) {

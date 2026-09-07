@@ -1,0 +1,10 @@
+{
+  "id": "msa-redline",
+  "skill": "sow-review",
+  "input": {
+    "document_path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md"
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "expected_findings_ref": "expected/msa-redline.findings.json",
+  "injection": false
+}

@@ -1,0 +1,18 @@
+{
+  "id": "services-scope-anxiety",
+  "skill": "find-evidence",
+  "input": {
+    "situation": "CFO worried the services engagement is too big and wants it carved down; needs a payback story versus hiring analysts",
+    "k": 5
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "relevant_spans": [
+    { "path": "context/org/evidence/cs-cascade-retail.md", "span": [2852, 3092], "required": true },
+    { "path": "context/demand-gen/icp/buyer.md", "span": [1770, 2506], "required": true },
+    {
+      "path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0001-brief.md",
+      "span": [1280, 1839],
+      "required": false
+    }
+  ]
+}

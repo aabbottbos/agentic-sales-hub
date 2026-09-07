@@ -1,0 +1,17 @@
+{
+  "id": "pricing-pushback",
+  "skill": "find-evidence",
+  "input": {
+    "situation": "customer pushing back on pricing; need discount authority and prior proposal pricing and an ROI reference",
+    "k": 5
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "relevant_spans": [
+    { "path": "context/org/pricing.md", "span": [575, 609], "required": true },
+    {
+      "path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0002-proposal.md",
+      "span": [907, 934],
+      "required": true
+    }
+  ]
+}

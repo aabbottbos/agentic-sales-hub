@@ -1,0 +1,17 @@
+{
+  "id": "integration-heavy-proof",
+  "skill": "find-evidence",
+  "input": {
+    "situation": "prospect had a prior visibility project that stalled at integration with a heavily customized NetSuite instance",
+    "k": 5
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "relevant_spans": [
+    {
+      "path": "context/org/evidence/cs-portside-distribution.md",
+      "span": [1370, 1754],
+      "required": true
+    },
+    { "path": "context/demand-gen/icp/account.md", "span": [1513, 1772], "required": true }
+  ]
+}

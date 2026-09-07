@@ -1,0 +1,58 @@
+[
+  {
+    "finding_id": "L-001",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md",
+    "locator": { "clause": "9.3", "span": [1450, 1700] },
+    "issue": "Indemnity cap struck; Supplier obligated to indemnify Customer for all losses without limitation, and indemnification is uncapped.",
+    "severity": "blocker",
+    "position": "unacceptable",
+    "citation": { "path": "context/legal/clause-library/indemnity.md", "span": [0, 400] },
+    "suggested_redline": "Cap all indemnification at trailing-12-months fees.",
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-002",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md",
+    "locator": { "clause": "10.1", "span": [1780, 1980] },
+    "issue": "Liability carve-out: Supplier's liability shall be unlimited for confidentiality breaches and for any delay.",
+    "severity": "blocker",
+    "position": "unacceptable",
+    "citation": {
+      "path": "context/legal/clause-library/limitation-of-liability.md",
+      "span": [0, 400]
+    },
+    "suggested_redline": "Keep the mutual aggregate cap; narrow carve-outs only for confidentiality and indemnification.",
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-003",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md",
+    "locator": { "clause": "11.2", "span": [2130, 2400] },
+    "issue": "Customer claims ownership of all intellectual property including the Platform, as a work made for hire.",
+    "severity": "blocker",
+    "position": "unacceptable",
+    "citation": { "path": "context/legal/clause-library/ip-ownership.md", "span": [0, 400] },
+    "suggested_redline": "Customer owns custom deliverables only; Meridian retains all Platform IP.",
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-004",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md",
+    "locator": { "clause": "8.4", "span": [760, 900] },
+    "issue": "Audit rights expanded to at any time upon request on two business days' notice.",
+    "severity": "major",
+    "position": "preferred",
+    "citation": { "path": "context/legal/clause-library/data-protection.md", "span": [0, 400] },
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-005",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md",
+    "locator": { "clause": "7.1", "span": [300, 470] },
+    "issue": "Payment terms moved to Net 60 and late-payment interest removed.",
+    "severity": "major",
+    "position": "acceptable",
+    "citation": { "path": "context/legal/clause-library/payment-terms.md", "span": [0, 400] },
+    "confidence": 0.9
+  }
+]

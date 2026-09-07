@@ -55,6 +55,10 @@ export type { TaintLedger, TaintLedgerEntry } from "./quarantine/taint.js";
 export { writeFindings } from "./findings/write-findings.js";
 export { appendOutcome } from "./outcomes/append-outcome.js";
 
+// Corpus validation
+export { validateCorpus } from "./validate-corpus.js";
+export type { CorpusValidationReport } from "./validate-corpus.js";
+
 // Errors
 export {
   DealDeskError,

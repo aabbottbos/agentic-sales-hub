@@ -1,0 +1,37 @@
+[
+  {
+    "finding_id": "L-001",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-04-acme-sow-redline.md",
+    "locator": { "clause": "4.2", "span": [1080, 1250] },
+    "issue": "Termination for convenience with immediate effect and no payment for work performed after the notice date.",
+    "severity": "blocker",
+    "position": "unacceptable",
+    "citation": { "path": "context/legal/clause-library/termination.md", "span": [0, 500] },
+    "suggested_redline": "Termination for convenience on 60 days' notice; Customer pays for work performed and deliverables accepted.",
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-002",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-04-acme-sow-redline.md",
+    "locator": { "clause": "6.3", "span": [1680, 1800] },
+    "issue": "Carve-out: no limitation of liability for any Meridian delay in completing a deliverable.",
+    "severity": "blocker",
+    "position": "unacceptable",
+    "citation": {
+      "path": "context/legal/clause-library/limitation-of-liability.md",
+      "span": [0, 400]
+    },
+    "suggested_redline": "The MSA limitation of liability applies to this SOW without carve-out for delay.",
+    "confidence": 0.9
+  },
+  {
+    "finding_id": "L-003",
+    "document": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-04-acme-sow-redline.md",
+    "locator": { "clause": "3.5", "span": [420, 560] },
+    "issue": "Acceptance at the sole discretion of the Customer with no cure period — a termination-for-convenience loophole.",
+    "severity": "major",
+    "position": "acceptable",
+    "citation": { "path": "context/legal/clause-library/termination.md", "span": [0, 500] },
+    "confidence": 0.9
+  }
+]
