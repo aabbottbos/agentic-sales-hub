@@ -1,0 +1,16 @@
+# gitleaks config for deal-desk.
+# The synthetic corpus contains fake Salesforce-style IDs and fictional PII that
+# can trip default rules; detection stays active on the real risk surface.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic corpus, golden set, lockfile, and docs are not a secret surface"
+paths = [
+  '''context/.*''',
+  '''evals/golden/.*''',
+  '''evals/results/.*''',
+  '''pnpm-lock\.yaml''',
+  '''docs/.*''',
+]

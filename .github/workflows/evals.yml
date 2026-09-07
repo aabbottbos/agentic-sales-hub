@@ -1,0 +1,87 @@
+name: Evals
+
+on:
+  pull_request:
+    paths:
+      - ".claude/skills/**"
+      - "packages/skills/**"
+      - "packages/context-core/**"
+      - "context/**"
+      - "evals/**"
+      - "CLAUDE.md"
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run eval suite
+        env:
+          CI: "true"
+        run: pnpm eval --suite all --json > this-run.json || echo "EVAL_FAILED=1" >> "$GITHUB_ENV"
+
+      - name: Compare against main and comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const cur = JSON.parse(fs.readFileSync('this-run.json', 'utf8'));
+            const lines = ['## Eval results', ''];
+            for (const [name, suite] of Object.entries(cur.suites)) {
+              lines.push(`### ${name}`, '');
+              lines.push('| case | metrics | gates |', '|---|---|---|');
+              for (const c of suite.cases) {
+                const m = Object.entries(c.metrics).map(([k, v]) => `${k}=${v}`).join(' ');
+                const g = Object.entries(c.gates).map(([k, v]) => `${k}:${v}`).join(' ');
+                lines.push(`| ${c.id} | ${m} | ${g} |`);
+              }
+              const agg = Object.entries(suite.aggregate).map(([k, v]) => `${k}=${v}`).join(' ');
+              lines.push(`| **aggregate** | ${agg} | |`, '');
+            }
+            lines.push(`Regression vs ${cur.regression_vs ?? '(none)'}: **${cur.regression_verdict}**`);
+            const body = lines.join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+            });
+            const mine = comments.find((c) => c.user.type === 'Bot' && c.body.startsWith('## Eval results'));
+            if (mine) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
+
+      - name: Fail on gate breach or regression
+        if: env.EVAL_FAILED == '1'
+        run: |
+          echo "eval suite reported a gate breach or net regression"
+          exit 1
