@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "references": [{ "path": "../packages/context-core" }, { "path": "../packages/skills" }],
+  "include": ["runner/**/*.ts", "scorers/**/*.ts"],
+  "exclude": ["**/*.test.ts", "dist", "golden", "cases", "results"]
+}

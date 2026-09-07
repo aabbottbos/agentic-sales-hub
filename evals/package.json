@@ -1,0 +1,13 @@
+{
+  "name": "@deal-desk/evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@deal-desk/context-core": "workspace:*",
+    "@deal-desk/skills": "workspace:*"
+  }
+}

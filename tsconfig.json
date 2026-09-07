@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/context-core" },
+    { "path": "./packages/skills" },
+    { "path": "./evals" }
+  ]
+}

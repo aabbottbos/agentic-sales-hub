@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+coverage/
+.vitest/
+*.log
+.env
+.env.*
+!.env.example
+.claude/.taint-ledger.jsonl
+evals/results/*.local.json

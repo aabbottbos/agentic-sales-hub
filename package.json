@@ -1,0 +1,30 @@
+{
+  "name": "deal-desk",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22 <23 || >=24"
+  },
+  "scripts": {
+    "typecheck": "tsc -b --pretty",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "build": "pnpm -r --filter \"./packages/*\" run build",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "eval": "tsx evals/runner/cli.ts",
+    "corpus:validate": "tsx packages/context-core/scripts/validate-corpus.ts",
+    "check:no-real-data": "tsx evals/runner/checks/no-real-data.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "~9.14.0",
+    "@types/node": "~22.9.0",
+    "eslint": "~9.14.0",
+    "prettier": "~3.3.3",
+    "tsx": "~4.19.2",
+    "typescript": "~5.6.3",
+    "typescript-eslint": "~8.14.0",
+    "vitest": "~2.1.5"
+  }
+}
