@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/inbound.json",
+  "title": "Inbound document (quarantined)",
+  "description": "Counterparty-supplied. Read-only, quarantined, untrusted. Loader wraps the body in untrusted-content delimiters and verifies source_hash on read.",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "source_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "sha256 of the LF-normalized document body (content after frontmatter). Verified by the loader on every read."
+    },
+    "quarantined": { "const": true },
+    "received": { "type": "string", "format": "date" },
+    "doc_type": { "enum": ["msa-redline", "sow-redline", "other"] },
+    "counterparty": { "type": "string", "minLength": 1 }
+  },
+  "required": ["source_hash", "quarantined", "received", "doc_type", "counterparty"],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/person.json",
+  "title": "Person",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "person_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "role": { "type": "string", "minLength": 1 },
+    "disposition": {
+      "enum": ["champion", "supporter", "neutral", "skeptic", "blocker"]
+    },
+    "quotes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "required": ["person_id", "role", "disposition", "quotes"],
+  "unevaluatedProperties": false
+}

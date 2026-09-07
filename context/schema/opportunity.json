@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/opportunity.json",
+  "title": "Opportunity",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "crm_system": {
+      "enum": ["salesforce", "hubspot"],
+      "description": "The system of record whose id shape crm_id follows."
+    },
+    "crm_id": {
+      "type": "string",
+      "pattern": "^006[A-Za-z0-9]{12}[A-Z]{3}$",
+      "description": "Salesforce-style 18-char Opportunity Id. Must equal the opportunity directory name. CI cross-checks."
+    },
+    "stage": {
+      "enum": ["Discovery", "Demo", "Proposal", "Negotiation", "Closed Won", "Closed Lost"]
+    },
+    "amount": { "type": "number", "exclusiveMinimum": 0 },
+    "close_date": { "type": "string", "format": "date" },
+    "competitors": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "required": ["crm_system", "crm_id", "stage", "amount", "close_date", "competitors"],
+  "unevaluatedProperties": false
+}

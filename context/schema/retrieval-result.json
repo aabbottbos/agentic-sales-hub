@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/retrieval-result.json",
+  "title": "Retrieval result (find-evidence output contract)",
+  "description": "OUTPUT-CONTRACT schema: validates a retrieval skill's ranked result list, not a file on disk.",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "span": {
+        "type": "array",
+        "prefixItems": [
+          { "type": "integer", "minimum": 0 },
+          { "type": "integer", "minimum": 0 }
+        ],
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "relevance": { "type": "number", "minimum": 0, "maximum": 1 },
+      "why": { "type": "string", "minLength": 1 }
+    },
+    "required": ["path", "span", "relevance", "why"],
+    "additionalProperties": false
+  }
+}

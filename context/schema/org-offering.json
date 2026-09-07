@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/org-offering.json",
+  "title": "Org — offering",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "canonical" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "offering_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "summary": { "type": "string", "minLength": 1 },
+    "scope_includes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "scope_excludes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "services_attach": { "type": "boolean" }
+  },
+  "required": ["offering_id", "summary", "scope_includes", "scope_excludes", "services_attach"],
+  "unevaluatedProperties": false
+}

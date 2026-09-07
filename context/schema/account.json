@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/account.json",
+  "title": "Account",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "account_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Must equal the account directory name. CI cross-checks."
+    },
+    "firmographics": {
+      "type": "object",
+      "properties": {
+        "employees": { "type": "integer", "exclusiveMinimum": 0 },
+        "industry": { "type": "string", "minLength": 1 },
+        "geo": { "type": "string", "minLength": 1 }
+      },
+      "required": ["employees", "industry", "geo"],
+      "additionalProperties": false
+    },
+    "history": { "type": "string", "minLength": 1 }
+  },
+  "required": ["account_slug", "firmographics", "history"],
+  "unevaluatedProperties": false
+}

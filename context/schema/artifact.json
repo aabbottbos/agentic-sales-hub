@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/artifact.json",
+  "title": "Generated artifact",
+  "description": "A skill-generated artifact (brief, summary, proposal, findings). Append-only; supersede, never delete. kind: findings additionally requires source_document + source_hash.",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "artifact_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "kind": { "enum": ["brief", "summary", "proposal", "findings"] },
+    "generated_by": {
+      "type": "string",
+      "description": "Skill id that produced this, e.g. sow-review, call-prep."
+    },
+    "superseded": { "type": "boolean", "default": false },
+    "citations": {
+      "type": "array",
+      "description": "Each material claim resolves to a context file span.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "span": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 0 },
+              { "type": "integer", "minimum": 0 }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "required": ["claim", "path", "span"],
+        "additionalProperties": false
+      }
+    },
+    "unsourced_claims": {
+      "type": "array",
+      "description": "Reserved for generation skills (Phase 1). Unused in Phase 0.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "source_document": {
+      "type": "string",
+      "description": "For kind: findings — the inbound doc reviewed."
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "For kind: findings — sha256 of the reviewed inbound doc body."
+    }
+  },
+  "required": ["artifact_id", "kind", "generated_by", "superseded", "citations"],
+  "if": {
+    "type": "object",
+    "properties": { "kind": { "const": "findings" } },
+    "required": ["kind"]
+  },
+  "then": {
+    "type": "object",
+    "properties": {
+      "source_document": true,
+      "source_hash": true
+    },
+    "required": ["source_document", "source_hash"]
+  },
+  "unevaluatedProperties": false
+}

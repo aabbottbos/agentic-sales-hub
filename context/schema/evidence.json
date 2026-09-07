@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/evidence.json",
+  "title": "Org — evidence (case study)",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "canonical" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "case_study_id": { "type": "string", "pattern": "^cs-[a-z0-9][a-z0-9-]*$" },
+    "industry": { "type": "string", "minLength": 1 },
+    "situation": { "type": "string", "minLength": 1 },
+    "solution": { "type": "string", "minLength": 1 },
+    "outcome_metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": { "type": "string", "minLength": 1 },
+          "value": { "type": "string", "minLength": 1 }
+        },
+        "required": ["metric", "value"],
+        "additionalProperties": false
+      }
+    },
+    "reference_ok": { "type": "boolean" }
+  },
+  "required": [
+    "case_study_id",
+    "industry",
+    "situation",
+    "solution",
+    "outcome_metrics",
+    "reference_ok"
+  ],
+  "unevaluatedProperties": false
+}

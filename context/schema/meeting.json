@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/meeting.json",
+  "title": "Meeting note",
+  "description": "Append-only. The body is a raw, messy meeting note; frontmatter only indexes it.",
+  "type": "object",
+  "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],
+  "properties": {
+    "fictional": true,
+    "mutability": { "const": "accumulating" },
+    "schema_version": true,
+    "created": true,
+    "title": true,
+    "date": { "type": "string", "format": "date" },
+    "meeting_type": {
+      "enum": ["discovery", "demo", "negotiation", "qbr", "internal"]
+    },
+    "attendees": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "required": ["date", "meeting_type", "attendees"],
+  "unevaluatedProperties": false
+}

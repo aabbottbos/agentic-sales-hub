@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/frontmatter-common.json",
+  "title": "Common frontmatter",
+  "description": "Fields every context file's YAML frontmatter carries. Composed into every type-specific schema via allOf.",
+  "$defs": {
+    "commonFields": {
+      "type": "object",
+      "properties": {
+        "fictional": {
+          "const": true,
+          "description": "Every corpus file is fictional. CI (no-real-data) fails on any file missing this."
+        },
+        "mutability": {
+          "enum": ["canonical", "accumulating"],
+          "description": "canonical: replaced and versioned through PR review. accumulating: append-only; never rewritten, superseded not deleted."
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Semver of the schema this file was authored against. Loader accepts same MAJOR and MINOR <= current."
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["fictional", "mutability", "schema_version", "created", "title"]
+    }
+  }
+}

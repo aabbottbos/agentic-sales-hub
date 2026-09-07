@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deal-desk.dev/schema/finding.json",
+  "title": "Review finding (sow-review output contract)",
+  "description": "Structured finding per spec §5.1. This is an OUTPUT-CONTRACT schema: it validates one element of a review skill's Finding[] output, not a file on disk. The runner validates Finding[] via `items`.",
+  "type": "object",
+  "properties": {
+    "finding_id": { "type": "string", "pattern": "^f-[0-9]{3,}$" },
+    "document": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path of the reviewed inbound document."
+    },
+    "locator": {
+      "type": "object",
+      "properties": {
+        "clause": { "type": "string", "minLength": 1 },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["clause", "span"],
+      "additionalProperties": false
+    },
+    "issue": { "type": "string", "minLength": 1 },
+    "severity": { "enum": ["blocker", "major", "minor"] },
+    "position": { "enum": ["preferred", "acceptable", "unacceptable"] },
+    "citation": {
+      "type": "object",
+      "description": "Resolves into context/legal/**. Must support the stated position.",
+      "properties": {
+        "path": { "type": "string", "pattern": "^context/legal/" },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["path", "span"],
+      "additionalProperties": false
+    },
+    "suggested_redline": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required for blocker/major (enforced by if/then below); optional for minor."
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "required": [
+    "finding_id",
+    "document",
+    "locator",
+    "issue",
+    "severity",
+    "position",
+    "citation",
+    "confidence"
+  ],
+  "if": {
+    "type": "object",
+    "properties": { "severity": { "enum": ["blocker", "major"] } },
+    "required": ["severity"]
+  },
+  "then": {
+    "type": "object",
+    "properties": { "suggested_redline": true },
+    "required": ["suggested_redline"]
+  },
+  "additionalProperties": false
+}
