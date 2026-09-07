@@ -1,0 +1,3 @@
+# Account slugs allowed in context/accounts/ beyond the synthetic namespace regex.
+# One slug per line. The namespace regex is:
+#   ^(meridian-|acme-|northwind-|globex-|initech-)[a-z0-9-]+$
