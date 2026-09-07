@@ -40,11 +40,17 @@ export interface SkillDefinition {
   context_grants: ContextGrants;
   inputs: Record<
     string,
-    { type: "string" | "number" | "boolean"; required?: boolean; enum?: string[] }
+    {
+      type: "string" | "number" | "boolean";
+      required?: boolean;
+      enum?: string[];
+      default?: unknown;
+    }
   >;
   output: { schema: string; requires_citations: boolean };
   eval_suite: string;
   tools: string[];
+  description?: string;
 }
 
 /** A parsed, schema-validated context file. */

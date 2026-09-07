@@ -1,0 +1,30 @@
+id: find-evidence
+tier: retrieval
+version: 1
+description: >-
+  Find and rank the org evidence, ICP material, and prior deal artifacts that
+  match a described deal situation. Returns a ranked list of cited spans; no
+  synthesis, no prose.
+context_grants:
+  read:
+    - context/org/**
+    - context/demand-gen/**
+    - context/accounts/*/opportunities/*/artifacts/**
+inputs:
+  situation:
+    type: string
+    required: true
+  account_slug:
+    type: string
+    required: false
+  k:
+    type: number
+    required: false
+    default: 10
+output:
+  schema: context/schema/retrieval-result.json
+  requires_citations: true
+eval_suite: evals/cases/find-evidence/
+tools:
+  - context.read
+  - context.search

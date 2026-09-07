@@ -1,0 +1,23 @@
+id: sow-review
+tier: review
+version: 1
+description: >-
+  Review a counterparty SOW or MSA redline against Meridian's legal guidance and
+  clause library. Returns structured findings only — never prose. Each finding
+  cites the clause-library entry that establishes the position it violates. Has
+  no write grant; a separate step persists findings.
+context_grants:
+  read:
+    - context/legal/guidance.md
+    - context/legal/clause-library/**
+    - context/accounts/*/opportunities/*/inbound/**
+inputs:
+  document_path:
+    type: string
+    required: true
+output:
+  schema: context/schema/finding.json
+  requires_citations: true
+eval_suite: evals/cases/sow-review/
+tools:
+  - context.read

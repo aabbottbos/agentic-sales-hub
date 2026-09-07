@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@deal-desk/context-core": "workspace:*",
+    "ajv": "~8.17.1",
     "yaml": "~2.6.1"
   }
 }

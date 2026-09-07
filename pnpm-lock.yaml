@@ -62,6 +62,9 @@ importers:
       '@deal-desk/context-core':
         specifier: workspace:*
         version: link:../context-core
+      ajv:
+        specifier: ~8.17.1
+        version: 8.17.1
       yaml:
         specifier: ~2.6.1
         version: 2.6.1

@@ -15,7 +15,9 @@
     "format": "prettier --write .",
     "eval": "tsx evals/runner/cli.ts",
     "corpus:validate": "tsx packages/context-core/scripts/validate-corpus.ts",
-    "check:no-real-data": "tsx evals/runner/checks/no-real-data.ts"
+    "check:no-real-data": "tsx evals/runner/checks/no-real-data.ts",
+    "skills:sync": "tsx packages/skills/src/scripts/sync-claude-skills.ts",
+    "skills:sync:check": "tsx packages/skills/src/scripts/sync-claude-skills.ts --check"
   },
   "devDependencies": {
     "@eslint/js": "~9.14.0",
