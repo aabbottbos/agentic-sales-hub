@@ -1,6 +1,6 @@
-# Deal Desk
+# Agentic Sales Hub
 
-An AI-native deal desk for a single seller — the layer between "we have a
+An Agentic Sales Hub — the layer between "we have a
 meeting" and "we have signed paper." One context substrate per opportunity;
 skills that read it; every artifact they produce cites the context it came from,
 and every skill is scored against a golden set before it ships.
