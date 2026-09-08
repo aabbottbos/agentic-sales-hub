@@ -7,6 +7,9 @@ Last updated: **2026-09-08**.
 
 **Phase 0 (Context Substrate + Eval Harness) is done and merged to `main`**
 (`d18595e..d263daa`, 11 commits, plan `docs/plans/001-context-substrate-eval-harness.md`).
+**The SDLC loop is live and exercised** — branch protection, labels, and the
+`evals.yml` PR-comment path all verified through real PRs (#3, #5). **Phase 1
+(Deal Spine) is starting** — see the last section.
 
 - `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green.
 - **122 unit tests pass.**
@@ -66,25 +69,33 @@ All six intent success criteria are met.
 - Node `engines` allows 24+ for local dev; `.nvmrc` + CI pin 22.
 - `docs/intent/` is singular (repo convention); the SDLC doc says `docs/intents/`.
 
+## Done since Phase 0
+
+- **Branch protection on `main`** — ruleset active: require PR, require `verify` +
+  `gitleaks`, block force-push, linear history. Direct pushes to `main` are
+  rejected (confirmed — the `PR-LOOP.md` commit itself bounced and went via PR #3).
+- **Labels** — `tier:0/1/2`, `intent`, `agent-ready`, `overnight`,
+  `eval-regression`, `human-only` all created.
+- **`PR-LOOP.md`** — step-by-step for taking a change through the loop (PR #3).
+- **`evals/golden/README.md` + `corpus.lock.json`** — added via PR #5, plus
+  `evals/runner/lock-corpus.ts` and `pnpm eval:lock` (regenerates the lock;
+  28 files). That PR also fixed a real `evals.yml` bug: `pnpm eval --json > file`
+  captured pnpm's lifecycle banner and broke `JSON.parse`; `cli.ts` now has
+  `--json-out <path>` and the workflow uses it. **The eval comparison comment
+  posts correctly on PRs** (verified on #5).
+
 ## Open follow-ups
 
-1. **Branch protection on `main`** — not yet configured. GitHub Settings →
-   Branches: require PRs, require checks `verify` + `gitleaks` (+ `evals` on
-   skill/schema/eval PRs), block direct pushes. Last piece of framework §6.4.
-2. **Labels** — create `tier:0/1/2`, `intent`, `agent-ready`, `overnight`,
-   `eval-regression`, `human-only` (`gh label create`).
-3. **`evals/golden/README.md` + `corpus.lock.json`** — deferred. `evals/golden/**`
-   is deny-listed in `.claude/settings.json` and blocked by protect-paths (by
-   design — it's the golden set). Add them via a `tier:0` PR that touches
-   `evals/golden/` — which also exercises `evals.yml` on an `evals/**` change for
-   the first time. `evals/golden/allowed-slugs.txt` already exists (the file the
-   checks actually read).
-4. **`night-shift.yml` + the detector** — framework §7, deferred to Week 3+.
+1. **`night-shift.yml` + the detector** — framework §7, deferred to Week 3+.
    Not started.
 
-## Next: Phase 1 — Deal Spine (spec §11, target Sep 22 – Oct 24)
+## Phase 1 — Deal Spine (spec §11, target Sep 22 – Oct 24) — STARTING
 
-Its own intent → spec → plan. Scope:
+Tier:2, so it takes the full chain: `/write-intent` → `/write-spec` → plan (in
+plan mode). Track it as `docs/intent/002-…` → `docs/specs/002-…` →
+`docs/plans/002-…`, opened as a GitHub issue from the intent template.
+
+Scope:
 
 - `call-prep`, `call-summary`, `proposal-draft` — **generation** tier, the first
   **LLM-backed** skills. Output = markdown + citation map + `[unsourced]`
