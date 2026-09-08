@@ -89,24 +89,63 @@ All six intent success criteria are met.
 1. **`night-shift.yml` + the detector** — framework §7, deferred to Week 3+.
    Not started.
 
-## Phase 1 — Deal Spine (spec §11, target Sep 22 – Oct 24) — STARTING
+## Phase 1 — Deal Spine (spec §11, target Sep 22 – Oct 24) — IN PROGRESS
 
-Tier:2, so it takes the full chain: `/write-intent` → `/write-spec` → plan (in
-plan mode). Track it as `docs/intent/002-…` → `docs/specs/002-…` →
-`docs/plans/002-…`, opened as a GitHub issue from the intent template.
+Tier:2. Full chain: `/write-intent` → `/write-spec` → plan (in plan mode), tracked
+as `docs/intent/002-…` → `docs/specs/002-…` → `docs/plans/002-…`.
 
-Scope:
+### Slicing decision (2026-09-08)
 
-- `call-prep`, `call-summary`, `proposal-draft` — **generation** tier, the first
-  **LLM-backed** skills. Output = markdown + citation map + `[unsourced]`
-  markers. New gate: generation rubric ≥ 4.0/5.
-- `packages/mcp-deal-desk` — the MCP server (`context.read` / `context.search` /
-  `artifact.write` / `skill.run` / `trace.get`), consuming `loadSkill()` from
-  `packages/skills`.
-- Trace emission + outcome records wired through `runSkill`.
-- The rest of the spec §10 corpus: 3 more opportunities at different stages,
-  ~12 meeting notes total, a 3rd case study is already present.
+Phase 1's spec-level scope (all 3 generation skills + MCP server + trace emission
++ §10 corpus expansion) is too large for one honest review. Slicing it:
 
-The `SkillImpl` interface and `runSkill` output-contract enforcement are already
-built to accept an LLM impl with no change to the schema, the harness, or the
-scorers.
+- **Intent 002 (this one) — `call-summary` end-to-end.** Prove the LLM-backed
+  generation path on the lowest-liability, most-checkable generation skill:
+  raw meeting note → `{ summary, commitments[], next_steps[], context_deltas[],
+  citations[] }` validated against a new `summary-output.json`. New eval class:
+  **generation** — LLM-judge rubric (grounding/completeness/tone/structure, ≥ 4.0/5)
+  plus deterministic citation-validity (= 1.00) and commitment-recall (≥ 0.90).
+  **This slice does NOT** persist an artifact (no `writeArtifact`), build the MCP
+  server, or add `call-prep` / `proposal-draft`.
+- **Intent 003 (later) — `call-prep` + `proposal-draft` + `writeArtifact()`** —
+  apply the pattern 002 establishes; add artifact persistence
+  (`kind: brief` / `kind: proposal`).
+- **Intent 004 (later) — `packages/mcp-deal-desk` + the §10 corpus expansion**
+  (3 more opportunities, ~12 meeting notes total).
+
+### Intent 002 — decisions locked
+
+| | |
+|---|---|
+| Skill | `call-summary` only. Tier `generation`. LLM-backed impl in `packages/skills/src/impl/call-summary.ts` behind the existing `SkillImpl` interface. |
+| Input | A path to a corpus meeting note (`context/accounts/.../meetings/*.md`) — accumulating context, not `inbound/**`, not untrusted. No change to `meeting.json`. |
+| Output | Structured object only, **no persistence this slice**. New `context/schema/summary-output.json` output-contract schema. |
+| Rubric | LLM-judge (spec §8). Judge prompt + model + rubric versioned in the repo. Citation validity stays deterministic. |
+| SDK / model API | **Open — the spec decides.** `@anthropic-ai/sdk` direct vs. Claude Agent SDK. Drives CI auth (`ANTHROPIC_API_KEY` vs. Claude Code OAuth token). |
+
+### Intent 002 — open questions for the spec
+
+1. Which SDK / model API (see table).
+2. How the LLM-judge run is gated in CI when the model call is flaky — retry
+   policy, hard-fail vs. skip-with-warning, on `evals.yml` critical path or a
+   separate job.
+3. Concrete shape of `context_deltas[]` — a labeled list, or a defined shape a
+   later step could apply.
+4. Whether the existing 3 Acme meeting notes + 1–2 new ones are a sufficient
+   golden set, or `call-summary` needs a 2nd opportunity's notes (which would pull
+   in the §10 corpus expansion this slice is trying to defer to intent 004).
+
+### Status
+
+- Issue **#7** opened (`[Intent]: Phase 1 — Deal Spine …`, labels `intent`,
+  `tier:2`).
+- Intent draft written (in the session transcript) — **not yet committed** to
+  `docs/intent/002-call-summary-generation-path.md`. Next: finish the
+  `write-intent` review, commit the intent on a branch, then `write-spec`.
+
+### Seam that's already in place
+
+The `SkillImpl` interface and `runSkill` output-contract enforcement accept an
+LLM impl with no change to the schema, the harness, or the existing scorers. The
+new pieces are the `summary-output.json` schema, the generation scorers
+(rubric + commitment-recall), and the judge harness.
