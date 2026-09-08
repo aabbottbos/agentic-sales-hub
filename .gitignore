@@ -10,3 +10,4 @@ coverage/
 !.env.example
 .claude/.taint-ledger*.jsonl
 evals/results/*.local.json
+this-run.json

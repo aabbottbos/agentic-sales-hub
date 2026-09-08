@@ -7,8 +7,11 @@
  *   --write-results      write evals/results/<date>-<sha>.json (default: true in CI)
  *   --no-compare         skip the regression comparison
  *   --json               print the raw report JSON instead of the table
+ *   --json-out <path>    write the raw report JSON to <path> (no stdout noise —
+ *                        for CI, avoids the pnpm lifecycle banner polluting a
+ *                        `> file` redirect)
  */
-import { readdir, readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ALL_SUITES, REPO_ROOT, runSuite, type SuiteName } from "./run-suite.js";
 import { anyGateFailed, buildReport, printTable, writeResult, type RunReport } from "./report.js";
@@ -63,6 +66,12 @@ async function main(): Promise<void> {
     if (cmp.regressions.length) {
       for (const r of cmp.regressions) console.error(`REGRESSION: ${r}`);
     }
+  }
+
+  const jsonOut = arg("json-out");
+  if (jsonOut) {
+    await writeFile(jsonOut, JSON.stringify(report, null, 2) + "\n", "utf8");
+    console.log(`wrote report json to ${jsonOut}`);
   }
 
   if (flag("json")) {

@@ -14,6 +14,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "eval": "tsx evals/runner/cli.ts",
+    "eval:lock": "tsx evals/runner/lock-corpus.ts",
     "corpus:validate": "tsx packages/context-core/scripts/validate-corpus.ts",
     "check:no-real-data": "tsx evals/runner/checks/no-real-data.ts",
     "skills:sync": "tsx packages/skills/src/scripts/sync-claude-skills.ts",

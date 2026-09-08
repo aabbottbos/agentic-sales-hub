@@ -1,0 +1,33 @@
+{
+  "generated": "2026-09-08",
+  "files": {
+    "context/accounts/acme-logistics/account.md": "fb3a881fb690f67c8ce8800de5c24c07ef061773da532b4787138179ff3b12e8",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0001-brief.md": "1330a1faecc8c91c4025d10f635b167f184bf8b0e189ff6ae12dd753e4fac775",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0002-proposal.md": "8d64192f2256b4e551e80b52908e152890c2f8f5f36db6560a45dfb2b12bdc6e",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md": "262800a24b2b8d2769cd65e890f1154bd734c618b9cc6f88e9488d4cfd66b1c2",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-04-acme-sow-redline.md": "0a3333c5068c9e5ffef47e1cc653e3b7c6030e8025d6786952cf0f994bd0e9ed",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-07-14-discovery.md": "9e27358a562279233857a386310f9ef4e3576e16390e7d574461ca4c98e870bd",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-08-05-demo.md": "6221ee1b1c5cf7a013b8b4f12e778bc4aa9bab59a7e22de73c3587c24ed2a76a",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-08-28-negotiation.md": "e7250235d1d36cb7012fb9fd07b5a18e2f2233116d10f3adc0bbc5a76f7d5f6d",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/opportunity.md": "f0500fb55a490352d4ca831edaa2f00c0b34eb152a9567a835ae55b8cbca02ab",
+    "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/outcomes.jsonl": "0f502545fbf290399b7db2b1f87a7fa612d46cb3c421d5971e0070ebff0b7a1e",
+    "context/accounts/acme-logistics/people/dana-reyes.md": "f946ec8725201287647b2050884e7a0943fbb353f3add9a8d513282433fdf224",
+    "context/accounts/acme-logistics/people/pat-morgan.md": "30e3509844c28a35ee1cadafd96b0de6cc6d8c4b85cb9c6dae2100f434599203",
+    "context/demand-gen/icp/account.md": "b82415132b3666108bcc3f7a6d0ad02f578524db76fcf5f1c1b14a2c9a0d3306",
+    "context/demand-gen/icp/buyer.md": "a89464d193397f68c8decf80d03ed239c221f2f3bbd1c216d1293814da6d9c69",
+    "context/legal/clause-library/data-protection.md": "cd58a428e3b409704be606b6fa1d5771d4a3b2a4e893f4a7fffc89d709317703",
+    "context/legal/clause-library/indemnity.md": "763c700e4b850c9978310e109074b50df17863f9d4a51adc51ffcc02b98afcf0",
+    "context/legal/clause-library/ip-ownership.md": "e4fb2dde30aab3c195eb2b74bfda26755135503033388b5a38867b311e284437",
+    "context/legal/clause-library/limitation-of-liability.md": "f3edb0936520cffb94e059f8646586593ac5f93937569d7063ebb4129df8c06b",
+    "context/legal/clause-library/payment-terms.md": "d47c474bd1493dfd1f0119766638e135e50ab54e8589309066c63c18ecc5d5bf",
+    "context/legal/clause-library/termination.md": "ec9c188a404d103d3c33c8c0d2e9b7280566970e4991a47423b3da4b1cf4b320",
+    "context/legal/guidance.md": "b63361ad2aaf569bd4700776c0d06091ac5141a071af45e86f99e24773a8c455",
+    "context/org/company.md": "10b96747aa03216b12965a6195dcf9a374a1edbbae1eeacf171048bc42549329",
+    "context/org/evidence/cs-cascade-retail.md": "015ef09270d3ad557402d77859197e2eab417e5b1801c0d469b193e2d6aad27d",
+    "context/org/evidence/cs-midwest-freight.md": "4b1f63434a3195bfc0a9a1f37c52a66cae7cc23b5c01623902e6cbfa5dfbdadf",
+    "context/org/evidence/cs-portside-distribution.md": "275d0bae95429ec1bf2072948823faaf31be914b80d4a127d4201329ec9bd84c",
+    "context/org/offerings/implementation-services.md": "06d1b2ad0d67c8734daa2aa401bfd89f5bdf90fb171625887c745fa58d81ac3b",
+    "context/org/offerings/platform.md": "8f8699fe279d05b4ab73dfd6aef1a57bd0270a1db756f6e911f5c59560210151",
+    "context/org/pricing.md": "8899b150d30f604ef1f123b6b7e859d9ba6360be8db84d95c37519cf2991bc3c"
+  }
+}

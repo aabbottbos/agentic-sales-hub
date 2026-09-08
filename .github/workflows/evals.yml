@@ -47,7 +47,7 @@ jobs:
       - name: Run eval suite
         env:
           CI: "true"
-        run: pnpm eval --suite all --json > this-run.json || echo "EVAL_FAILED=1" >> "$GITHUB_ENV"
+        run: pnpm eval --suite all --json-out this-run.json || echo "EVAL_FAILED=1" >> "$GITHUB_ENV"
 
       - name: Compare against main and comment
         if: github.event_name == 'pull_request'
