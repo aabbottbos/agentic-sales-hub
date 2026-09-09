@@ -1,7 +1,7 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-09** (spec 002 drafted, PR #11).
+Last updated: **2026-09-09** (spec 002 cold-reviewed + approved, PR #11 ready to merge).
 
 ## Where we are
 
@@ -25,8 +25,11 @@ both the quarantine hook and the injection harness (`injection: PASS` confirms).
 Schema `$id` base is now `https://agentic-sales-hub.dev/schema/`.
 
 **Phase 1 is in progress** — intent 002 **merged** (PR #10, squash `a78e2d0`);
-spec 002 drafted and open in **PR #11** (`spec/002-call-summary-generation-path`),
-awaiting cold approval; then plan mode → `docs/plans/002-…`. See the last section.
+spec 002 **cold-reviewed and approved** (comment on PR #11, `c7c8540`) — one
+edit: OQ5 resolved plan-avoids-`SCHEMA_TYPES` (generation branch validates the
+raw `summary-output.json` file, no `context-core` change). **PR #11 is ready to
+merge** (`spec/002-call-summary-generation-path`); after merge → fresh branch off
+`main` → plan mode → `docs/plans/002-…`. See the last section.
 
 - `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green.
 - **122 unit tests pass.**
@@ -152,14 +155,25 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
   < 0.85 or `counterparty_document`/`unknown` → `inbound/` quarantine; only
   `meeting_note` ≥ 0.85 → `meetings/`; `org_material` never auto-writes canonical.
 
-## Intent 002 — call-summary generation path — SPEC DRAFTED, awaiting cold approval
+## Intent 002 — call-summary generation path — SPEC APPROVED, PR #11 ready to merge
 
 Carved out of the amendment (proceeds in parallel with the WI chain).
 
 - **Intent:** `docs/intent/002-call-summary-generation-path.md` — **merged** (PR #10, `a78e2d0`).
-- **Spec:** `docs/specs/002-call-summary-generation-path.md` — open in **PR #11**,
-  branch `spec/002-call-summary-generation-path`, awaiting cold approval in a
-  separate session (solo-discipline rule). Then plan mode → `docs/plans/002-…`.
+- **Spec:** `docs/specs/002-call-summary-generation-path.md` — **cold-reviewed and
+  approved** (PR #11 comment, `c7c8540`). CI green. **Merge intent + spec together**
+  (one design gate), then plan mode → `docs/plans/002-…`.
+- **Cold-review outcome:** one edit — **OQ5 resolved plan-avoids-`SCHEMA_TYPES`**:
+  the `runSkill` generation branch validates against the raw `summary-output.json`
+  JSON Schema file directly (compiled in `packages/skills`), NOT via
+  `context-core`'s `SCHEMA_TYPES` tuple or a new loader method. Keeps the intent's
+  "not touched: `packages/context-core`" literally true. `finding` /
+  `retrieval-result` still go through the registry; `summary-output` deliberately
+  does not — the plan owns where the compiled validator lives. All other judgment
+  calls (1–9) accepted as written.
+- **Waved into the plan (no spec edit):** OQ7 (offsets already fixed by
+  `resolve-citation.ts` — whole-file LF-normalized, frontmatter included);
+  generation-branch throw-vs-flag; registry access from `run-suite.ts`.
 - **Issue #7** stays open as the Phase 1 umbrella; commented with the spec link.
 - **Gotcha for next session:** the intent/spec branches are ephemeral and get
   deleted on merge. Start each stage from a fresh branch off `main`; don't commit
