@@ -1,7 +1,7 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-09**.
+Last updated: **2026-09-09** (spec 002 cold-reviewed + approved, PR #11 ready to merge).
 
 ## Where we are
 
@@ -24,8 +24,12 @@ Amendment §3. Env var `DEAL_DESK_TAINT_LEDGER` → `ASH_TAINT_LEDGER` landed in
 both the quarantine hook and the injection harness (`injection: PASS` confirms).
 Schema `$id` base is now `https://agentic-sales-hub.dev/schema/`.
 
-**Phase 1 is in progress** — intent 002 committed (PR #10), awaiting cold
-approval; then `write-spec`. See the last section.
+**Phase 1 is in progress** — intent 002 **merged** (PR #10, squash `a78e2d0`);
+spec 002 **cold-reviewed and approved** (comment on PR #11, `c7c8540`) — one
+edit: OQ5 resolved plan-avoids-`SCHEMA_TYPES` (generation branch validates the
+raw `summary-output.json` file, no `context-core` change). **PR #11 is ready to
+merge** (`spec/002-call-summary-generation-path`); after merge → fresh branch off
+`main` → plan mode → `docs/plans/002-…`. See the last section.
 
 - `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green.
 - **122 unit tests pass.**
@@ -79,8 +83,9 @@ All six intent success criteria are met.
 
 - **D5 — deterministic skills** in Phase 0, not LLM-backed. ADR `docs/decisions/0001`.
   Phase 1 swaps an LLM-backed impl into `packages/skills/src/impl/` behind the
-  same contract. (Intent 002 OQ1 leans `@anthropic-ai/sdk` direct, **not** the
-  Agent SDK — model-portability is an explicit v1 non-goal; the spec confirms.)
+  same contract. Spec 002 resolves the how: `@anthropic-ai/sdk` direct behind a
+  single seam function (`impl/llm.ts`), **not** the Agent SDK — model portability
+  is an explicit v1 non-goal.
 - `finding.json` `suggested_redline` required for blocker/major, optional for minor.
 - `find-evidence` read grant excludes `outcomes.jsonl`.
 - Node `engines` allows 24+ for local dev; `.nvmrc` + CI pin 22.
@@ -88,6 +93,9 @@ All six intent success criteria are met.
 
 ## Done since Phase 0
 
+- **Intent 002 — call-summary generation path** (PR #10, squash `a78e2d0`).
+  tier:2 intent committed; issue #7 is the Phase 1 umbrella. Spec follow-up is
+  PR #11 (open).
 - **WI-0 — rename to Agentic Sales Hub** (PR #9, squash `5942c0d`). Mechanical,
   T0. See "Where we are" above for the details. `rg -i "deal.?desk"` now hits
   only the two exempt decision-record docs.
@@ -147,56 +155,90 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
   < 0.85 or `counterparty_document`/`unknown` → `inbound/` quarantine; only
   `meeting_note` ≥ 0.85 → `meetings/`; `org_material` never auto-writes canonical.
 
-## Intent 002 — call-summary generation path — COMMITTED, awaiting cold approval
+## Intent 002 — call-summary generation path — SPEC APPROVED, PR #11 ready to merge
 
 Carved out of the amendment (proceeds in parallel with the WI chain).
 
-- **File:** `docs/intent/002-call-summary-generation-path.md` — committed on
-  branch `intent/002-call-summary-generation-path`, **PR #10** open, awaiting
-  approval in a separate session (solo-discipline rule).
-- **Issue #7** stays open as the Phase 1 umbrella; commented with the slice
-  breakdown → WI-2 / WI-3 / WI-4.
+- **Intent:** `docs/intent/002-call-summary-generation-path.md` — **merged** (PR #10, `a78e2d0`).
+- **Spec:** `docs/specs/002-call-summary-generation-path.md` — **cold-reviewed and
+  approved** (PR #11 comment, `c7c8540`). CI green. **Merge intent + spec together**
+  (one design gate), then plan mode → `docs/plans/002-…`.
+- **Cold-review outcome:** one edit — **OQ5 resolved plan-avoids-`SCHEMA_TYPES`**:
+  the `runSkill` generation branch validates against the raw `summary-output.json`
+  JSON Schema file directly (compiled in `packages/skills`), NOT via
+  `context-core`'s `SCHEMA_TYPES` tuple or a new loader method. Keeps the intent's
+  "not touched: `packages/context-core`" literally true. `finding` /
+  `retrieval-result` still go through the registry; `summary-output` deliberately
+  does not — the plan owns where the compiled validator lives. All other judgment
+  calls (1–9) accepted as written.
+- **Waved into the plan (no spec edit):** OQ7 (offsets already fixed by
+  `resolve-citation.ts` — whole-file LF-normalized, frontmatter included);
+  generation-branch throw-vs-flag; registry access from `run-suite.ts`.
+- **Issue #7** stays open as the Phase 1 umbrella; commented with the spec link.
+- **Gotcha for next session:** the intent/spec branches are ephemeral and get
+  deleted on merge. Start each stage from a fresh branch off `main`; don't commit
+  to `main` directly (it's protected, the commit bounces).
 
-### Scope (locked in the intent)
+### Scope (locked in the intent, detailed in the spec)
 
 `call-summary` **end-to-end and only that**. LLM-backed impl in
 `packages/skills/src/impl/call-summary.ts` behind the existing `SkillImpl`
-interface — no change to `skill-def.schema.json`, `runSkill`, or the eval
-harness shape. Input: a path to a corpus meeting note
+interface. Input: a path to a corpus meeting note
 (`context/accounts/.../meetings/*.md`) — accumulating context, not `inbound/**`.
+Read grant is `context/accounts/*/opportunities/*/meetings/**` **only** — no
+`opportunity.md`, no write grant, `tools: [context.read]`.
 Output: `{ summary, commitments[], next_steps[], context_deltas[], citations[] }`,
-validated against a new `context/schema/summary-output.json`. **No persistence**
-(no `writeArtifact`, no `outcomes.jsonl`) — deferred to WI-2.
+validated against a new **output-contract** schema `context/schema/summary-output.json`
+(separate from `artifact.json`, which stays reserved for the WI-2 persisted-artifact
+path). `context_deltas[]` is structured — `{field, observation, citation}` with a
+small `field` enum. **No persistence** (no `writeArtifact`, no `outcomes.jsonl`) —
+deferred to WI-2.
 
-New **generation** eval class: LLM-judge rubric
-(grounding/completeness/tone/structure, ≥ 4.0/5) + deterministic citation-validity
-(= 1.00) + commitment-recall (≥ 0.90). Judge prompt, model ID, rubric committed.
+New **generation** eval class (`evals/cases/call-summary/`, scorers in
+`evals/scorers/generation.ts` + `judge.ts`, judge harness in `evals/judge/`):
+LLM-judge rubric (grounding/completeness/tone/structure, aggregate ≥ 4.0/5) +
+deterministic citation-validity (= 1.00, resolve-only, reuses
+`scoreRetrievalCitations`) + deterministic commitment-recall (≥ 0.90). Judge
+prompt, judge-model ID, and rubric committed to the repo.
 
-### Open questions the spec must settle
+### Open questions — spec resolutions
 
-1. **Confirm `@anthropic-ai/sdk` direct** (not the Agent SDK), LLM call behind a
-   single seam. Model-portability across foundation-model vendors is an
-   **explicit v1 non-goal** — the eval gates are calibrated against one model +
-   one judge model; a user-swappable model invalidates the golden-set scores.
-   Keep the seam narrow so a later adapter stays possible.
-2. **CI auth + flaky-judge gating** — `ANTHROPIC_API_KEY` vs. OAuth token
-   (follows from OQ1); retry policy; hard-fail vs. skip-with-warning; `evals.yml`
-   critical path vs. separate job.
-3. **`context_deltas[]` shape** — labeled free-text list vs. a structured shape a
-   later context-update / `writeArtifact` path could apply mechanically.
-4. **Golden-set sufficiency** — 3 existing Acme notes, or 1–2 new ones.
-   **Scope fence:** spec may add ≤ 2 new Acme meeting notes; a second
-   opportunity or the §10 expansion kicks back to WI-4.
+1. **SDK** — resolved: `@anthropic-ai/sdk` direct, one seam function
+   (`impl/llm.ts`). Model portability is an **explicit v1 non-goal**. Plan
+   confirms the package version + seam location.
+2. **CI auth + flaky judge** — resolved: `ANTHROPIC_API_KEY` GitHub secret;
+   rubric gate runs **blocking, on the `evals.yml` critical path**; retry-median
+   (first cut: 3 attempts, median, hard-fail < 4.0). Plan sets the tolerance
+   band (first cut ±0.3) and the attempt/median numbers.
+3. **`context_deltas[]` shape** — resolved: structured `{field, observation,
+   citation}`. Plan finalizes the `field` enum against what the notes contain.
+4. **Golden set** — start with the 3 existing Acme notes; plan may add **≤ 2**
+   `acme-` notes during rubric calibration. Beyond → WI-4.
 
-### Not open (spec-drafting work, not decisions)
+### New open questions the spec surfaced (for the plan)
 
-- The rubric dimensions are settled; the spec writes the scale + anchor
-  descriptions.
-- Dating the intent — premature; the amendment reshuffled the sequence.
+5. **Does `summary-output` need to be a first-class `context-core` schema type**
+   (`SCHEMA_TYPES` / registry, like `finding`/`retrieval-result`), or can the
+   runner validate against the raw JSON Schema file? The registry route is
+   low-surprise but means a `context-core` change inside a slice whose intent
+   said "no `context-core` change" — call it out at merge if so.
+6. **Rubric-anchor calibration is circular** until an impl exists. Plan sequence:
+   schema + skeleton impl + deterministic scorers first, then calibrate anchors
+   + tolerance band against real output. The 4.0 gate is fixed; anchors/band are
+   calibrated.
+7. **Citation span offsets** — file offsets (incl. frontmatter) vs. body-only.
+   Must match what `resolveCitation` expects (`sow-review` cites by raw-file
+   offset). Most likely source of a citation-validity < 1.00 failure — pin it in
+   the plan.
 
-### Seam that's already in place
+### Judgment calls flagged in the spec (9 total — cold review starts there)
 
-The `SkillImpl` interface and `runSkill` output-contract enforcement accept an
-LLM impl with no change to the schema, the harness, or the existing scorers. The
-new pieces are the `summary-output.json` schema, the generation scorers
-(rubric + commitment-recall), and the judge harness.
+The load-bearing one: **JC #1** — "no change to `runSkill` / the eval harness"
+is read as "no change to *signatures, types, and the case→score→gate pipeline*",
+not "zero new code." `runSkill` gets a `generation` branch in its output-contract
+switch (today it silently no-ops for non-retrieval/review tiers); `run-suite.ts`
+gets a `runGenerationSuite()` + `"call-summary"` in `SuiteName` / `ALL_SUITES`.
+Also: `IMPLS`, `PRODUCT_SKILL_IDS`, and the `sync-claude-skills.ts` filter all
+gain `"call-summary"`; a generated `.claude/skills/call-summary/SKILL.md` is
+committed and `skills:check` must stay green. If any of that reads as a seam
+violation, the **intent's wording** needs a fix, not the approach.
