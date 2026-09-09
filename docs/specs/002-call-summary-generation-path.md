@@ -349,12 +349,22 @@ non-goal here (OQ1), not opened.
 - **`runSkill` extension** (`packages/skills/src/runner.ts`):
   - The output-contract `switch` currently has `retrieval` and `review` branches
     and silently no-ops for any other tier. Add a `generation` branch that: (a)
-    validates the output against `summary-output.json` via the loader registry
-    (a `"summary-output"` schema type is registered in `context-core`), and (b)
-    if `def.output.requires_citations`, runs the deterministic resolve-only
-    citation check and sets `citationsValid`. **This is a contract extension, not
-    a signature change** — `runSkill`'s parameters and return type are untouched.
+    validates the output against `summary-output.json`, and (b) if
+    `def.output.requires_citations`, runs the deterministic resolve-only citation
+    check and sets `citationsValid`. **This is a contract extension, not a
+    signature change** — `runSkill`'s parameters and return type are untouched.
     Judgment calls #1.
+  - **No `context-core` change (OQ5 resolved).** `loadSchemas` already
+    auto-discovers every `context/schema/*.json` and keys it by `$id` basename,
+    so `summary-output.json` is loadable through `ctx.loader.registry.get(...)`
+    the moment the file exists — but the generation branch validates against the
+    **raw JSON Schema file directly** (compiled once in `packages/skills`), *not*
+    by adding `"summary-output"` to `context-core`'s `SCHEMA_TYPES` tuple or
+    adding a loader assertion method. This keeps the intent's "not touched:
+    `packages/context-core`" literally true, at the cost of a small asymmetry
+    with how `finding` / `retrieval-result` are wired (those go through the
+    registry + a loader method). The plan owns where the compiled validator
+    lives. If a later slice wants the registry route, that is its own change.
   - `IMPLS` in `runner.ts`, `PRODUCT_SKILL_IDS` in `types.ts`, and the
     `sync-claude-skills.ts` filter all gain `"call-summary"`. `skills:check` must
     stay green (a generated `.claude/skills/call-summary/SKILL.md` is committed;
@@ -407,7 +417,9 @@ decision on:
    `runSkill`'s signature, or the eval harness interfaces") is met on that
    reading. **Flag if you consider a new switch branch / suite function a seam
    violation** — if so, the seam claim in the intent needs rewording, not the
-   code.
+   code. *Cold review: accepted this reading.* Also confirmed at cold review:
+   `packages/context-core` stays untouched — the generation branch validates
+   against the raw `summary-output.json` file, not via `SCHEMA_TYPES` (OQ5).
 
 2. **`summary-output.json` is a new, separate output-contract schema — NOT a
    reuse of `artifact.json`.** `artifact.json` already has `kind: "summary"` and
@@ -479,13 +491,14 @@ Carried from `intent.md`, with this spec's resolution noted:
 New, surfaced by this spec:
 
 5. **Does a `"summary-output"` schema type need to be a first-class member of
-   `context-core`'s `SCHEMA_TYPES` / registry**, or can the eval runner and
-   `runSkill` validate against the raw JSON Schema file directly? `finding.json`
-   and `retrieval-result.json` are handled via the registry today; matching that
-   is the low-surprise choice, but it means a `context-core` change (new schema
-   type) inside a slice whose intent says "no `context-core` change." The plan
-   decides; if it must touch `context-core`, that widens the "who it affects"
-   list and should be called out at merge.
+   `context-core`'s `SCHEMA_TYPES` / registry?** — *resolved (cold review):* **no.**
+   `runSkill`'s generation branch validates against the raw `summary-output.json`
+   JSON Schema file directly (compiled in `packages/skills`), *not* via
+   `context-core`'s `SCHEMA_TYPES` tuple or a new loader method. `finding` /
+   `retrieval-result` go through the registry today; `summary-output` deliberately
+   does not, so the intent's "not touched: `packages/context-core`" holds. The
+   plan owns where the compiled validator lives and the small wiring asymmetry
+   that results. Revisiting the registry route is a later slice's call.
 
 6. **Rubric anchor calibration is circular until an impl exists.** The rubric's
    1–5 anchor text can only be finalized by running a real `call-summary` output
