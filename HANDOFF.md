@@ -1,15 +1,31 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-08**.
+Last updated: **2026-09-09**.
 
 ## Where we are
 
 **Phase 0 (Context Substrate + Eval Harness) is done and merged to `main`**
 (`d18595e..d263daa`, 11 commits, plan `docs/plans/001-context-substrate-eval-harness.md`).
 **The SDLC loop is live and exercised** — branch protection, labels, and the
-`evals.yml` PR-comment path all verified through real PRs (#3, #5). **Phase 1
-(Deal Spine) is starting** — see the last section.
+`evals.yml` PR-comment path all verified through real PRs (#3, #5).
+
+**The Adoptability Amendment is in force** (`docs/AgenticSalesHub_Spec_Adoptability-Amendment_v1.md`,
+2026-09-08). It adds a co-equal objective — an outside org clones, populates its
+own context, and gets useful output without rework — and reshapes the roadmap
+into a strict dependency chain: **WI-0 → WI-1 → WI-2 → WI-3 → WI-4 → WI-5**, each
+its own intent → spec → plan → PR. Intent 002 (`call-summary`) is explicitly
+carved out and proceeds in parallel.
+
+**WI-0 (rename to Agentic Sales Hub) is done and merged** (`5942c0d`, PR #9).
+`deal-desk`/`DEAL_DESK_*`/`DealDesk*` → `agentic-sales-hub`/`ASH_*`/`AshError`
+everywhere except the naming-decision record in `Spec_v2.md` §1.5 and the
+Amendment §3. Env var `DEAL_DESK_TAINT_LEDGER` → `ASH_TAINT_LEDGER` landed in
+both the quarantine hook and the injection harness (`injection: PASS` confirms).
+Schema `$id` base is now `https://agentic-sales-hub.dev/schema/`.
+
+**Phase 1 is in progress** — intent 002 committed (PR #10), awaiting cold
+approval; then `write-spec`. See the last section.
 
 - `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green.
 - **122 unit tests pass.**
@@ -28,7 +44,7 @@ All six intent success criteria are met.
 |---|---|---|
 | Context loader / security boundary | `packages/context-core/` | done — 92 tests. `createLoader()` is the entrypoint (`src/loader.ts`). |
 | Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12). `context/schema/README.md` is the path→schema table. |
-| Synthetic corpus | `context/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. |
+| Synthetic corpus | `context/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. **WI-1 will `git mv` this to `examples/demo-corpus/`.** |
 | Skills | `packages/skills/` | done — `find-evidence` + `sow-review`, **deterministic** (ADR `docs/decisions/0001`). YAML defs in `src/definitions/`, impls in `src/impl/`, `runSkill` in `src/runner.ts`. |
 | Eval harness | `evals/` | done — scorers, cases, `runner/cli.ts` (`pnpm eval`), `runner/injection-harness.ts`. |
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
@@ -62,8 +78,9 @@ All six intent success criteria are met.
 ## Deviations from the spec (already accepted; flag if revisiting)
 
 - **D5 — deterministic skills** in Phase 0, not LLM-backed. ADR `docs/decisions/0001`.
-  Phase 1 swaps an Agent-SDK impl into `packages/skills/src/impl/` behind the
-  same contract.
+  Phase 1 swaps an LLM-backed impl into `packages/skills/src/impl/` behind the
+  same contract. (Intent 002 OQ1 leans `@anthropic-ai/sdk` direct, **not** the
+  Agent SDK — model-portability is an explicit v1 non-goal; the spec confirms.)
 - `finding.json` `suggested_redline` required for blocker/major, optional for minor.
 - `find-evidence` read grant excludes `outcomes.jsonl`.
 - Node `engines` allows 24+ for local dev; `.nvmrc` + CI pin 22.
@@ -71,6 +88,9 @@ All six intent success criteria are met.
 
 ## Done since Phase 0
 
+- **WI-0 — rename to Agentic Sales Hub** (PR #9, squash `5942c0d`). Mechanical,
+  T0. See "Where we are" above for the details. `rg -i "deal.?desk"` now hits
+  only the two exempt decision-record docs.
 - **Branch protection on `main`** — ruleset active: require PR, require `verify` +
   `gitleaks`, block force-push, linear history. Direct pushes to `main` are
   rejected (confirmed — the `PR-LOOP.md` commit itself bounced and went via PR #3).
@@ -88,60 +108,91 @@ All six intent success criteria are met.
 
 1. **`night-shift.yml` + the detector** — framework §7, deferred to Week 3+.
    Not started.
+2. **Blocking decisions before the first outside clone** (amendment §12): repo
+   public-from-day-one (v2 open decision #1) and the license (#2). Needed before
+   WI-5.
+3. **HANDOFF vs. amendment numbering** — resolved: the amendment's WI chain
+   (intent 003–007) is authoritative. The old HANDOFF "intent 003/004" split is
+   folded into WI-2 (`call-prep` + write path) and WI-4 (MCP + corpus). Intent
+   002 (`call-summary`) is unchanged and proceeds now.
 
-## Phase 1 — Deal Spine (spec §11, target Sep 22 – Oct 24) — IN PROGRESS
+## The work chain (amendment §6–§11)
 
-Tier:2. Full chain: `/write-intent` → `/write-spec` → plan (in plan mode), tracked
-as `docs/intent/002-…` → `docs/specs/002-…` → `docs/plans/002-…`.
+Strict dependency order. Each WI is its own committed intent → spec → plan → PR.
+**Never weaken an eval gate to make a WI pass.**
 
-### Slicing decision (2026-09-08)
+| WI | What | Tier | Intent | State |
+|---|---|---|---|---|
+| **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
+| **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | not started |
+| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | not started |
+| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 005 | not started |
+| **WI-4** | `packages/mcp-agentic-sales-hub` + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 006 | not started |
+| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 007 | not started |
 
-Phase 1's spec-level scope (all 3 generation skills + MCP server + trace emission
-+ §10 corpus expansion) is too large for one honest review. Slicing it:
+**WI-1 must land before WI-4** or the MCP server bakes in a hardcoded context root.
 
-- **Intent 002 (this one) — `call-summary` end-to-end.** Prove the LLM-backed
-  generation path on the lowest-liability, most-checkable generation skill:
-  raw meeting note → `{ summary, commitments[], next_steps[], context_deltas[],
-  citations[] }` validated against a new `summary-output.json`. New eval class:
-  **generation** — LLM-judge rubric (grounding/completeness/tone/structure, ≥ 4.0/5)
-  plus deterministic citation-validity (= 1.00) and commitment-recall (≥ 0.90).
-  **This slice does NOT** persist an artifact (no `writeArtifact`), build the MCP
-  server, or add `call-prep` / `proposal-draft`.
-- **Intent 003 (later) — `call-prep` + `proposal-draft` + `writeArtifact()`** —
-  apply the pattern 002 establishes; add artifact persistence
-  (`kind: brief` / `kind: proposal`).
-- **Intent 004 (later) — `packages/mcp-agentic-sales-hub` + the §10 corpus expansion**
-  (3 more opportunities, ~12 meeting notes total).
+### Shared contracts to read before touching any WI (amendment §5)
 
-### Intent 002 — decisions locked
+- **Context root** — `resolveContextRoot()` precedence: `opts.root` → `ASH_CONTEXT_ROOT`
+  → `ash.config.json` `contextRoot` → `./context`. An empty `context/` is a valid
+  state, not an error — the loader returns an empty tree.
+- **Three customization knobs** (all optional markdown+frontmatter, new schemas):
+  `context/org/voice.md`, `playbook.md`, `templates/<kind>.md`. Plus a capped
+  escape hatch: `context/org/skill-overrides/<skill-id>.md`, ≤ 2,000 chars, CI
+  fails if over.
+- **Write path** — `writeArtifact()` mints the id, validates against the kind's
+  output schema + org template, opens an `unused` outcome. `appendOutcome()` is
+  append-only. `routeIntake()` is a **default-deny trust boundary**: confidence
+  < 0.85 or `counterparty_document`/`unknown` → `inbound/` quarantine; only
+  `meeting_note` ≥ 0.85 → `meetings/`; `org_material` never auto-writes canonical.
 
-| | |
-|---|---|
-| Skill | `call-summary` only. Tier `generation`. LLM-backed impl in `packages/skills/src/impl/call-summary.ts` behind the existing `SkillImpl` interface. |
-| Input | A path to a corpus meeting note (`context/accounts/.../meetings/*.md`) — accumulating context, not `inbound/**`, not untrusted. No change to `meeting.json`. |
-| Output | Structured object only, **no persistence this slice**. New `context/schema/summary-output.json` output-contract schema. |
-| Rubric | LLM-judge (spec §8). Judge prompt + model + rubric versioned in the repo. Citation validity stays deterministic. |
-| SDK / model API | **Open — the spec decides.** `@anthropic-ai/sdk` direct vs. Claude Agent SDK. Drives CI auth (`ANTHROPIC_API_KEY` vs. Claude Code OAuth token). |
+## Intent 002 — call-summary generation path — COMMITTED, awaiting cold approval
 
-### Intent 002 — open questions for the spec
+Carved out of the amendment (proceeds in parallel with the WI chain).
 
-1. Which SDK / model API (see table).
-2. How the LLM-judge run is gated in CI when the model call is flaky — retry
-   policy, hard-fail vs. skip-with-warning, on `evals.yml` critical path or a
-   separate job.
-3. Concrete shape of `context_deltas[]` — a labeled list, or a defined shape a
-   later step could apply.
-4. Whether the existing 3 Acme meeting notes + 1–2 new ones are a sufficient
-   golden set, or `call-summary` needs a 2nd opportunity's notes (which would pull
-   in the §10 corpus expansion this slice is trying to defer to intent 004).
+- **File:** `docs/intent/002-call-summary-generation-path.md` — committed on
+  branch `intent/002-call-summary-generation-path`, **PR #10** open, awaiting
+  approval in a separate session (solo-discipline rule).
+- **Issue #7** stays open as the Phase 1 umbrella; commented with the slice
+  breakdown → WI-2 / WI-3 / WI-4.
 
-### Status
+### Scope (locked in the intent)
 
-- Issue **#7** opened (`[Intent]: Phase 1 — Deal Spine …`, labels `intent`,
-  `tier:2`).
-- Intent draft written (in the session transcript) — **not yet committed** to
-  `docs/intent/002-call-summary-generation-path.md`. Next: finish the
-  `write-intent` review, commit the intent on a branch, then `write-spec`.
+`call-summary` **end-to-end and only that**. LLM-backed impl in
+`packages/skills/src/impl/call-summary.ts` behind the existing `SkillImpl`
+interface — no change to `skill-def.schema.json`, `runSkill`, or the eval
+harness shape. Input: a path to a corpus meeting note
+(`context/accounts/.../meetings/*.md`) — accumulating context, not `inbound/**`.
+Output: `{ summary, commitments[], next_steps[], context_deltas[], citations[] }`,
+validated against a new `context/schema/summary-output.json`. **No persistence**
+(no `writeArtifact`, no `outcomes.jsonl`) — deferred to WI-2.
+
+New **generation** eval class: LLM-judge rubric
+(grounding/completeness/tone/structure, ≥ 4.0/5) + deterministic citation-validity
+(= 1.00) + commitment-recall (≥ 0.90). Judge prompt, model ID, rubric committed.
+
+### Open questions the spec must settle
+
+1. **Confirm `@anthropic-ai/sdk` direct** (not the Agent SDK), LLM call behind a
+   single seam. Model-portability across foundation-model vendors is an
+   **explicit v1 non-goal** — the eval gates are calibrated against one model +
+   one judge model; a user-swappable model invalidates the golden-set scores.
+   Keep the seam narrow so a later adapter stays possible.
+2. **CI auth + flaky-judge gating** — `ANTHROPIC_API_KEY` vs. OAuth token
+   (follows from OQ1); retry policy; hard-fail vs. skip-with-warning; `evals.yml`
+   critical path vs. separate job.
+3. **`context_deltas[]` shape** — labeled free-text list vs. a structured shape a
+   later context-update / `writeArtifact` path could apply mechanically.
+4. **Golden-set sufficiency** — 3 existing Acme notes, or 1–2 new ones.
+   **Scope fence:** spec may add ≤ 2 new Acme meeting notes; a second
+   opportunity or the §10 expansion kicks back to WI-4.
+
+### Not open (spec-drafting work, not decisions)
+
+- The rubric dimensions are settled; the spec writes the scale + anchor
+  descriptions.
+- Dating the intent — premature; the amendment reshuffled the sequence.
 
 ### Seam that's already in place
 
