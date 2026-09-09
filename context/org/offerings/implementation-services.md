@@ -44,7 +44,7 @@ Typical total: **10–14 weeks**. Priced on the rate card in `../pricing.md` wit
 - **Historical backfill is capped at 13 months.** More is a change order.
 - **Hypercare is 30 days.** Ongoing managed services are a separate engagement,
   not part of this SOW, and are not something we currently sell well — do not
-  commit to them in a deal without deal-desk review.
+  commit to them in a deal without sales-leadership review.
 - **Acceptance is milestone-based** against the written integration design, with
   a defined review-and-cure cycle. We do not accept "sole discretion of the
   customer" acceptance language — see `../../legal/clause-library/termination.md`.

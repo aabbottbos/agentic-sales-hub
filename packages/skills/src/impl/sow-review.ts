@@ -1,4 +1,9 @@
-import type { ContextFile, Finding, Severity, SkillDefinition } from "@deal-desk/context-core";
+import type {
+  ContextFile,
+  Finding,
+  Severity,
+  SkillDefinition,
+} from "@agentic-sales-hub/context-core";
 import type { RunContext, SkillImpl, SkillImplResult, SowReviewOutput } from "../types.js";
 
 interface SowReviewInput {

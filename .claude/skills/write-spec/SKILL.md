@@ -5,7 +5,7 @@ description: Take a committed intent.md for a tier:2 capability and draft spec.m
 
 # Write Spec
 
-You are running the Design stage of the deal-desk SDLC. Unlike `write-intent`, this is not an interview. You draft the whole `spec.md` from the committed intent and the repo's standing policy, then hand it back for the user to review for **conflicts and omissions, not prose**. You write the spec; they flag where you violated a constraint they care about.
+You are running the Design stage of the Agentic Sales Hub SDLC. Unlike `write-intent`, this is not an interview. You draft the whole `spec.md` from the committed intent and the repo's standing policy, then hand it back for the user to review for **conflicts and omissions, not prose**. You write the spec; they flag where you violated a constraint they care about.
 
 ## Step 0 — Confirm this is the right stage
 

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import ajv2020Module from "ajv/dist/2020.js";
-import type { SkillDefinition } from "@deal-desk/context-core";
+import type { SkillDefinition } from "@agentic-sales-hub/context-core";
 
 const Ajv2020 = ((ajv2020Module as unknown as { default?: unknown }).default ??
   ajv2020Module) as unknown as typeof import("ajv/dist/2020.js").default;
@@ -16,7 +16,7 @@ function packageRoot(): string {
     if (existsSync(join(dir, "package.json"))) return dir;
     dir = dirname(dir);
   }
-  throw new Error("could not locate @deal-desk/skills package root");
+  throw new Error("could not locate @agentic-sales-hub/skills package root");
 }
 
 const ROOT = packageRoot();

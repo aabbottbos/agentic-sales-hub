@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scoreRetrieval, covers } from "./retrieval.js";
 import { scoreReview, matches } from "./review.js";
-import type { Finding, RetrievalHit } from "@deal-desk/context-core";
+import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 const hit = (path: string, span: [number, number]): RetrievalHit => ({
   path,

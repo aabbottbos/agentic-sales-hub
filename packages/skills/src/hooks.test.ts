@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createLoader } from "@deal-desk/context-core";
+import { createLoader } from "@agentic-sales-hub/context-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../..");

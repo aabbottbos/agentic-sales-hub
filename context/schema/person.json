@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/person.json",
+  "$id": "https://agentic-sales-hub.dev/schema/person.json",
   "title": "Person",
   "type": "object",
   "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],

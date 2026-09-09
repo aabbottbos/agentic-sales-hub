@@ -62,7 +62,7 @@ session restart to take effect, just create the files by hand with an editor.)
 ```markdown
 # The golden set
 
-Ground truth for the Deal Desk eval suite. Protected — it changes only through a
+Ground truth for the Agentic Sales Hub eval suite. Protected — it changes only through a
 reviewed PR (`.claude/settings.json` denies writes; a protect-paths hook blocks
 `rm`/`mv`), because a golden set you can quietly edit is not a golden set.
 
@@ -113,7 +113,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { walkContext } from "@deal-desk/context-core";
+import { walkContext } from "@agentic-sales-hub/context-core";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const files = await walkContext(repoRoot);

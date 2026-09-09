@@ -4,7 +4,7 @@ import { createLoader } from "./loader.js";
 import { classify } from "./frontmatter/classify.js";
 import { parseFrontmatter } from "./frontmatter/parse.js";
 import { validateAgainst } from "./schema/validate.js";
-import { DealDeskError } from "./errors.js";
+import { AshError } from "./errors.js";
 
 export interface CorpusValidationReport {
   filesChecked: number;
@@ -73,7 +73,7 @@ export async function validateCorpus(repoRoot: string): Promise<CorpusValidation
         }
       }
     } catch (e) {
-      const message = e instanceof DealDeskError ? e.message : (e as Error).message;
+      const message = e instanceof AshError ? e.message : (e as Error).message;
       errors.push({ path: rel, message });
     }
   }

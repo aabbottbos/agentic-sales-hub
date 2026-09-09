@@ -1,4 +1,4 @@
-import type { ContextLoader, Finding, RetrievalHit } from "@deal-desk/context-core";
+import type { ContextLoader, Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 export interface CitationScore {
   /** valid citations / total citations */

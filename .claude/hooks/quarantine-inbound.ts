@@ -6,7 +6,7 @@
  * Reads the tool-call JSON on stdin: `{ tool_name, tool_input, cwd }`.
  * Exit 0 = allow. Exit 2 = block (stderr carries the reason).
  *
- * Detection is against the taint ledger that `@deal-desk/context-core` writes
+ * Detection is against the taint ledger that `@agentic-sales-hub/context-core` writes
  * every time `readInbound` runs — see packages/context-core/src/quarantine/taint.ts.
  * The threat model is "content the agent already ingested flowing back out."
  */
@@ -86,10 +86,9 @@ async function main(): Promise<void> {
 
   const tool = hook.tool_name ?? "";
   const input = hook.tool_input ?? {};
-  // DEAL_DESK_TAINT_LEDGER lets the eval injection-harness point the hook at the
+  // ASH_TAINT_LEDGER lets the eval injection-harness point the hook at the
   // same ledger it populated. Defaults to the session ledger.
-  const ledgerPath =
-    process.env.DEAL_DESK_TAINT_LEDGER ?? join(root, ".claude/.taint-ledger.jsonl");
+  const ledgerPath = process.env.ASH_TAINT_LEDGER ?? join(root, ".claude/.taint-ledger.jsonl");
   const ledger = createTaintLedger(ledgerPath);
 
   const candidates = candidateStrings(tool, input);

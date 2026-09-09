@@ -52,5 +52,5 @@ roles:
 ## The pattern to watch
 
 The champion and the CFO often **disagree about the services scope**. The
-champion wants everything done; the CFO wants it lean. The deal-desk move is to
+champion wants everything done; the CFO wants it lean. The right move is to
 scope services to prove value fast (Cascade), not to maximize the engagement.

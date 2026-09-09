@@ -1,4 +1,4 @@
-// @deal-desk/skills — skill definitions as data + the runSkill dispatcher.
+// @agentic-sales-hub/skills — skill definitions as data + the runSkill dispatcher.
 
 export { loadSkill, listSkills, _resetRegistryCache } from "./registry.js";
 export { runSkill, validateInput } from "./runner.js";
@@ -14,4 +14,4 @@ export type {
   FindEvidenceOutput,
   SowReviewOutput,
 } from "./types.js";
-export type { SkillDefinition } from "@deal-desk/context-core";
+export type { SkillDefinition } from "@agentic-sales-hub/context-core";

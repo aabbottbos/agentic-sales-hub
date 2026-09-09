@@ -1,4 +1,4 @@
-import type { Finding, Severity } from "@deal-desk/context-core";
+import type { Finding, Severity } from "@agentic-sales-hub/context-core";
 
 export const SEVERITY_WEIGHT: Record<Severity, number> = { blocker: 5, major: 2, minor: 1 };
 

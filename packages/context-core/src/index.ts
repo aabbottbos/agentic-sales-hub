@@ -1,4 +1,4 @@
-// @deal-desk/context-core — the context substrate loader and security boundary.
+// @agentic-sales-hub/context-core — the context substrate loader and security boundary.
 
 export { createLoader } from "./loader.js";
 export type { ContextLoader, LoaderOptions } from "./loader.js";
@@ -61,7 +61,7 @@ export type { CorpusValidationReport } from "./validate-corpus.js";
 
 // Errors
 export {
-  DealDeskError,
+  AshError,
   SchemaValidationError,
   SourceHashMismatchError,
   CitationUnresolvableError,
@@ -71,7 +71,7 @@ export {
   QuarantineBypassError,
   UnreadableError,
 } from "./errors.js";
-export type { DealDeskErrorCode } from "./errors.js";
+export type { AshErrorCode } from "./errors.js";
 
 // Types
 export type {

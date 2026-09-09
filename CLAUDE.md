@@ -13,18 +13,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `.claude/hooks/` — quarantine + protect-paths (PreToolUse), format-on-write (PostToolUse); `.claude/settings.json` registers them.
 - `.github/workflows/` — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`.
 
-Not yet built (Phase 1+): `packages/mcp-deal-desk`, `apps/surface/`, the generation skills (`call-prep` / `call-summary` / `proposal-draft`), `context/legal/templates/`, most of the spec §10 corpus.
+Not yet built (Phase 1+): `packages/mcp-agentic-sales-hub`, `apps/surface/`, the generation skills (`call-prep` / `call-summary` / `proposal-draft`), `context/legal/templates/`, most of the spec §10 corpus.
 
 Two documents are the source of truth and should be read before any non-trivial work:
 
 - `docs/AgenticSalesHub_Spec_v2.md` — what is being built and why. Positioning, the context model (§4, the core IP), skill contracts (§5), architecture (§6), evaluation strategy (§8), trust/security (§9), phasing (§11).
 - `docs/AgenticSalesHub_AISDLCFramework_v1.md` — how it gets built. Stage map, work tiers, GitHub automation, the overnight loop, weekly cadence.
 
-External name is **Deal Desk**, not "Agentic Sales Hub". The repo slug is legacy.
+The product name is **Agentic Sales Hub** at every level (spec Adoptability Amendment §3, superseding v2 §1.5). The `agentic-sales-hub` repo slug matches.
 
 ## What the product is
 
-An AI-native deal desk for a single seller: the layer between "we have a meeting" and "we have signed paper". A per-opportunity context substrate (files with typed frontmatter, git as the store) plus five agents that read it — `find-evidence` (retrieval), `sow-review` (review), `call-prep` / `call-summary` / `proposal-draft` (generation). Every generated artifact cites the context it came from; every skill is scored against a golden eval set before it ships.
+An AI-native sales desk for a single seller: the layer between "we have a meeting" and "we have signed paper". A per-opportunity context substrate (files with typed frontmatter, git as the store) plus five agents that read it — `find-evidence` (retrieval), `sow-review` (review), `call-prep` / `call-summary` / `proposal-draft` (generation). Every generated artifact cites the context it came from; every skill is scored against a golden eval set before it ships.
 
 The product *ships agent configuration*, so the repo runs two lifecycles at once: application code (verified by tests/typecheck/build) and agent config — skill definitions, prompts, context schema, this file, hooks (verified by `evals/`). A 4-point eval pass-rate drop is a regression exactly like a red test.
 
@@ -104,7 +104,7 @@ context/schema/           17 JSON Schemas — the published context spec
 context/                  the synthetic corpus
 .claude/hooks/            quarantine-inbound, protect-paths, format-on-write
 --- Phase 1+ ---
-packages/mcp-deal-desk    MCP server (context.read/search, artifact.write, skill.run, trace.get)
+packages/mcp-agentic-sales-hub    MCP server (context.read/search, artifact.write, skill.run, trace.get)
 apps/surface/             thin Next.js surface: context editor, trace viewer, eval board
 ```
 

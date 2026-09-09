@@ -9,7 +9,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { walkContext } from "@deal-desk/context-core";
+import { walkContext } from "@agentic-sales-hub/context-core";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const files = await walkContext(repoRoot);

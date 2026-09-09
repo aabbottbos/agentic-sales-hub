@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/icp-buyer.json",
+  "$id": "https://agentic-sales-hub.dev/schema/icp-buyer.json",
   "title": "Demand-gen — ICP buyer",
   "type": "object",
   "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],

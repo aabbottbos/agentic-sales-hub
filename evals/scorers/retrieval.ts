@@ -1,4 +1,4 @@
-import type { RetrievalHit } from "@deal-desk/context-core";
+import type { RetrievalHit } from "@agentic-sales-hub/context-core";
 
 export interface LabeledSpan {
   path: string;

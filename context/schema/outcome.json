@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/outcome.json",
+  "$id": "https://agentic-sales-hub.dev/schema/outcome.json",
   "title": "Outcome record",
   "description": "One JSON object per line of outcomes.jsonl. Append-only. NOT a frontmatter file — does not compose frontmatter-common.",
   "type": "object",

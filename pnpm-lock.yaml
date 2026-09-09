@@ -35,10 +35,10 @@ importers:
 
   evals:
     dependencies:
-      '@deal-desk/context-core':
+      '@agentic-sales-hub/context-core':
         specifier: workspace:*
         version: link:../packages/context-core
-      '@deal-desk/skills':
+      '@agentic-sales-hub/skills':
         specifier: workspace:*
         version: link:../packages/skills
 
@@ -59,7 +59,7 @@ importers:
 
   packages/skills:
     dependencies:
-      '@deal-desk/context-core':
+      '@agentic-sales-hub/context-core':
         specifier: workspace:*
         version: link:../context-core
       ajv:

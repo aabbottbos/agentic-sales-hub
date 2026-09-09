@@ -1,4 +1,4 @@
-import type { SkillDefinition } from "@deal-desk/context-core";
+import type { SkillDefinition } from "@agentic-sales-hub/context-core";
 import { loadSkill } from "./registry.js";
 import { findEvidenceImpl } from "./impl/find-evidence.js";
 import { sowReviewImpl } from "./impl/sow-review.js";

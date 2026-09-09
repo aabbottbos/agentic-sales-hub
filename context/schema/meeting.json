@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/meeting.json",
+  "$id": "https://agentic-sales-hub.dev/schema/meeting.json",
   "title": "Meeting note",
   "description": "Append-only. The body is a raw, messy meeting note; frontmatter only indexes it.",
   "type": "object",

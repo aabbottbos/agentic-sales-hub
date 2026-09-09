@@ -1,6 +1,6 @@
-# The Deal Desk context schema
+# The Agentic Sales Hub context schema
 
-This directory **is** the context spec. Every file Deal Desk reads or writes under
+This directory **is** the context spec. Every file Agentic Sales Hub reads or writes under
 `context/` is a Markdown file with typed YAML frontmatter validated against one of the JSON
 Schemas here (JSON Schema draft 2020-12). Git is the store — there is no database.
 
@@ -12,7 +12,7 @@ Schemas here (JSON Schema draft 2020-12). Git is the store — there is no datab
 | **accumulating** | `context/accounts/**` | Append-only. A meeting note is never rewritten. A superseded artifact is marked `superseded: true`, never deleted. Nothing under `opportunities/**` is ever removed. |
 
 Every file's frontmatter declares its own `mutability`, and each schema pins it with a
-`const`. The loader (`@deal-desk/context-core`) enforces the append-only rule; a
+`const`. The loader (`@agentic-sales-hub/context-core`) enforces the append-only rule; a
 protect-paths hook is a second layer over `context/legal/**` and `evals/golden/**`.
 
 ## How a file is matched to a schema

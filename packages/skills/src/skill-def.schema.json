@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/skill-def.json",
+  "$id": "https://agentic-sales-hub.dev/schema/skill-def.json",
   "title": "Skill definition",
   "description": "The data shape that drives a Claude Code skill, the MCP tool, and the eval runner from one file (spec §5.3).",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/clause.json",
+  "$id": "https://agentic-sales-hub.dev/schema/clause.json",
   "title": "Legal — clause-library entry",
   "type": "object",
   "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],

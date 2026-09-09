@@ -42,9 +42,9 @@ All six intent success criteria are met.
   shingles to the taint ledger. `.claude/settings.json` denies raw `Read` on
   `inbound/**`.
 - **The quarantine hook** (`.claude/hooks/quarantine-inbound.ts`) reads
-  `.claude/.taint-ledger.jsonl` (or `$DEAL_DESK_TAINT_LEDGER`) and blocks any
+  `.claude/.taint-ledger.jsonl` (or `$ASH_TAINT_LEDGER`) and blocks any
   Write/Edit/Bash whose arg text matches an ingested inbound doc. The eval
-  injection-harness sets `DEAL_DESK_TAINT_LEDGER` to
+  injection-harness sets `ASH_TAINT_LEDGER` to
   `.claude/.taint-ledger.eval.jsonl` so the hook sees the ledger the harness
   populated. Both ledger files are gitignored (`.claude/.taint-ledger*.jsonl`).
 - **`sow-review` matcher**: whitespace-normalizes the extracted inbound body
@@ -110,7 +110,7 @@ Phase 1's spec-level scope (all 3 generation skills + MCP server + trace emissio
 - **Intent 003 (later) — `call-prep` + `proposal-draft` + `writeArtifact()`** —
   apply the pattern 002 establishes; add artifact persistence
   (`kind: brief` / `kind: proposal`).
-- **Intent 004 (later) — `packages/mcp-deal-desk` + the §10 corpus expansion**
+- **Intent 004 (later) — `packages/mcp-agentic-sales-hub` + the §10 corpus expansion**
   (3 more opportunities, ~12 meeting notes total).
 
 ### Intent 002 — decisions locked

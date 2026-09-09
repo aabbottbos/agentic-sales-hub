@@ -6,7 +6,7 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { validateCorpus } from "@deal-desk/context-core";
+import { validateCorpus } from "@agentic-sales-hub/context-core";
 
 function repoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));

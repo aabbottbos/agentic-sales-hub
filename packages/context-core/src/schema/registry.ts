@@ -41,7 +41,7 @@ export const SCHEMA_TYPES = [
 
 export type SchemaType = (typeof SCHEMA_TYPES)[number];
 
-const ID_BASE = "https://deal-desk.dev/schema/";
+const ID_BASE = "https://agentic-sales-hub.dev/schema/";
 
 export interface SchemaRegistry {
   /** Get the compiled validator for a schema type. Throws if unknown. */

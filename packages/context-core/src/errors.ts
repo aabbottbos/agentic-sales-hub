@@ -1,9 +1,9 @@
 /**
- * Typed errors for @deal-desk/context-core. Every error carries a stable `.code`
+ * Typed errors for @agentic-sales-hub/context-core. Every error carries a stable `.code`
  * so callers (skills, the eval runner, hooks) can branch without string matching.
  */
 
-export type DealDeskErrorCode =
+export type AshErrorCode =
   | "SCHEMA_VALIDATION"
   | "SOURCE_HASH_MISMATCH"
   | "CITATION_UNRESOLVABLE"
@@ -13,8 +13,8 @@ export type DealDeskErrorCode =
   | "QUARANTINE_BYPASS"
   | "UNREADABLE";
 
-export abstract class DealDeskError extends Error {
-  abstract readonly code: DealDeskErrorCode;
+export abstract class AshError extends Error {
+  abstract readonly code: AshErrorCode;
 
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
@@ -23,7 +23,7 @@ export abstract class DealDeskError extends Error {
 }
 
 /** A context file's frontmatter failed JSON Schema validation. */
-export class SchemaValidationError extends DealDeskError {
+export class SchemaValidationError extends AshError {
   readonly code = "SCHEMA_VALIDATION" as const;
   readonly path: string;
   readonly schemaType: string;
@@ -38,7 +38,7 @@ export class SchemaValidationError extends DealDeskError {
 }
 
 /** An inbound/** file's body hash does not match its declared `source_hash`. */
-export class SourceHashMismatchError extends DealDeskError {
+export class SourceHashMismatchError extends AshError {
   readonly code = "SOURCE_HASH_MISMATCH" as const;
   readonly path: string;
   readonly declared: string;
@@ -55,7 +55,7 @@ export class SourceHashMismatchError extends DealDeskError {
 }
 
 /** A citation `{path, span}` does not resolve to real text. */
-export class CitationUnresolvableError extends DealDeskError {
+export class CitationUnresolvableError extends AshError {
   readonly code = "CITATION_UNRESOLVABLE" as const;
   readonly citationPath: string;
   readonly span: readonly [number, number];
@@ -68,7 +68,7 @@ export class CitationUnresolvableError extends DealDeskError {
 }
 
 /** Cited text resolves but does not support the claim/position it is attached to. */
-export class CitationUnsupportedError extends DealDeskError {
+export class CitationUnsupportedError extends AshError {
   readonly code = "CITATION_UNSUPPORTED" as const;
   readonly citationPath: string;
 
@@ -79,7 +79,7 @@ export class CitationUnsupportedError extends DealDeskError {
 }
 
 /** A skill tried to read or write a path outside its declared context grants. */
-export class ScopeViolationError extends DealDeskError {
+export class ScopeViolationError extends AshError {
   readonly code = "SCOPE_VIOLATION" as const;
   readonly attemptedPath: string;
 
@@ -90,7 +90,7 @@ export class ScopeViolationError extends DealDeskError {
 }
 
 /** A write violated the append-only rule for accumulating context. */
-export class AppendOnlyViolationError extends DealDeskError {
+export class AppendOnlyViolationError extends AshError {
   readonly code = "APPEND_ONLY_VIOLATION" as const;
   readonly targetPath: string;
   readonly operation: string;
@@ -103,7 +103,7 @@ export class AppendOnlyViolationError extends DealDeskError {
 }
 
 /** Raw inbound/** content was accessed outside the quarantine wrapper. */
-export class QuarantineBypassError extends DealDeskError {
+export class QuarantineBypassError extends AshError {
   readonly code = "QUARANTINE_BYPASS" as const;
 
   constructor(reason: string) {
@@ -112,7 +112,7 @@ export class QuarantineBypassError extends DealDeskError {
 }
 
 /** A file could not be read or parsed at all. */
-export class UnreadableError extends DealDeskError {
+export class UnreadableError extends AshError {
   readonly code = "UNREADABLE" as const;
   readonly path: string;
 
