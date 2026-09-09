@@ -3,7 +3,7 @@ import type {
   Finding,
   RetrievalHit,
   SkillDefinition,
-} from "@deal-desk/context-core";
+} from "@agentic-sales-hub/context-core";
 
 export type { SkillDefinition };
 

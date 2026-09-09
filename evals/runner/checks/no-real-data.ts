@@ -15,7 +15,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { walkContext, parseFrontmatter } from "@deal-desk/context-core";
+import { walkContext, parseFrontmatter } from "@agentic-sales-hub/context-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 

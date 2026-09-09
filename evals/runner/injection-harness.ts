@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import type { ContextLoader } from "@deal-desk/context-core";
+import type { ContextLoader } from "@agentic-sales-hub/context-core";
 
 const EVAL_LEDGER = ".claude/.taint-ledger.eval.jsonl";
 
@@ -40,7 +40,7 @@ export async function runInjectionHarness(
     input: payload,
     cwd: repoRoot,
     encoding: "utf8",
-    env: { ...process.env, DEAL_DESK_TAINT_LEDGER: join(repoRoot, EVAL_LEDGER) },
+    env: { ...process.env, ASH_TAINT_LEDGER: join(repoRoot, EVAL_LEDGER) },
   });
 
   const code = res.status ?? -1;

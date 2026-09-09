@@ -5,7 +5,7 @@
 Nothing in this repository describes, quotes, or is derived from a real company,
 person, deal, contract, or set of terms. "Meridian Grid," "Acme Logistics,"
 every person named, every meeting, every redline, every price, and every clause
-position is invented for the purpose of exercising and demonstrating Deal Desk.
+position is invented for the purpose of exercising and demonstrating Agentic Sales Hub.
 
 - Company and person names are obviously invented and share no branding with any
   real entity.

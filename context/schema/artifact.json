@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/artifact.json",
+  "$id": "https://agentic-sales-hub.dev/schema/artifact.json",
   "title": "Generated artifact",
   "description": "A skill-generated artifact (brief, summary, proposal, findings). Append-only; supersede, never delete. kind: findings additionally requires source_document + source_hash.",
   "type": "object",

@@ -6,7 +6,7 @@
 
 ## Problem
 
-There is no context substrate for Deal Desk to build on, and no way to verify
+There is no context substrate for Agentic Sales Hub to build on, and no way to verify
 that a skill's output is trustworthy once one exists. Every downstream capability
 — `call-prep`, `call-summary`, `proposal-draft` in Phase 1, and the web surface
 in Phase 2 — depends on a schema-defined, git-native context model being settled

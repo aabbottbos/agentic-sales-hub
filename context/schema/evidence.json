@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/evidence.json",
+  "$id": "https://agentic-sales-hub.dev/schema/evidence.json",
   "title": "Org — evidence (case study)",
   "type": "object",
   "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],

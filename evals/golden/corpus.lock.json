@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-08",
+  "generated": "2026-09-09",
   "files": {
     "context/accounts/acme-logistics/account.md": "fb3a881fb690f67c8ce8800de5c24c07ef061773da532b4787138179ff3b12e8",
     "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0001-brief.md": "1330a1faecc8c91c4025d10f635b167f184bf8b0e189ff6ae12dd753e4fac775",
@@ -14,7 +14,7 @@
     "context/accounts/acme-logistics/people/dana-reyes.md": "f946ec8725201287647b2050884e7a0943fbb353f3add9a8d513282433fdf224",
     "context/accounts/acme-logistics/people/pat-morgan.md": "30e3509844c28a35ee1cadafd96b0de6cc6d8c4b85cb9c6dae2100f434599203",
     "context/demand-gen/icp/account.md": "b82415132b3666108bcc3f7a6d0ad02f578524db76fcf5f1c1b14a2c9a0d3306",
-    "context/demand-gen/icp/buyer.md": "a89464d193397f68c8decf80d03ed239c221f2f3bbd1c216d1293814da6d9c69",
+    "context/demand-gen/icp/buyer.md": "00e152f4d9b15b683b3968a2735c86a230b0a7d326bd208c06e2eb1807a9ec06",
     "context/legal/clause-library/data-protection.md": "cd58a428e3b409704be606b6fa1d5771d4a3b2a4e893f4a7fffc89d709317703",
     "context/legal/clause-library/indemnity.md": "763c700e4b850c9978310e109074b50df17863f9d4a51adc51ffcc02b98afcf0",
     "context/legal/clause-library/ip-ownership.md": "e4fb2dde30aab3c195eb2b74bfda26755135503033388b5a38867b311e284437",
@@ -26,8 +26,8 @@
     "context/org/evidence/cs-cascade-retail.md": "015ef09270d3ad557402d77859197e2eab417e5b1801c0d469b193e2d6aad27d",
     "context/org/evidence/cs-midwest-freight.md": "4b1f63434a3195bfc0a9a1f37c52a66cae7cc23b5c01623902e6cbfa5dfbdadf",
     "context/org/evidence/cs-portside-distribution.md": "275d0bae95429ec1bf2072948823faaf31be914b80d4a127d4201329ec9bd84c",
-    "context/org/offerings/implementation-services.md": "06d1b2ad0d67c8734daa2aa401bfd89f5bdf90fb171625887c745fa58d81ac3b",
+    "context/org/offerings/implementation-services.md": "5145c5e41b52f4f2154a3c770d558482da7b5da7f2ab13075021923f97f0acd6",
     "context/org/offerings/platform.md": "8f8699fe279d05b4ab73dfd6aef1a57bd0270a1db756f6e911f5c59560210151",
-    "context/org/pricing.md": "8899b150d30f604ef1f123b6b7e859d9ba6360be8db84d95c37519cf2991bc3c"
+    "context/org/pricing.md": "08cbdb81bf6cdf36f556fb7892c93e7546855750742dde1039d4dbac6b486da9"
   }
 }

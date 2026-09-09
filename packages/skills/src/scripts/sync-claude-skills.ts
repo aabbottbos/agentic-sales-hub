@@ -4,7 +4,7 @@
  * YAML definition. The SKILL.md is a thin generated wrapper — the definition is
  * the source of truth. CI checks that running this leaves no diff.
  *
- *   pnpm --filter @deal-desk/skills exec tsx src/scripts/sync-claude-skills.ts [--check]
+ *   pnpm --filter @agentic-sales-hub/skills exec tsx src/scripts/sync-claude-skills.ts [--check]
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { listSkills } from "../registry.js";
 import { PRODUCT_SKILL_IDS } from "../types.js";
-import type { SkillDefinition } from "@deal-desk/context-core";
+import type { SkillDefinition } from "@agentic-sales-hub/context-core";
 
 function repoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -49,7 +49,7 @@ ${def.description ?? ""}
 
 ## How to run it
 
-Invoke \`runSkill('${def.id}', input, ctx)\` from \`@deal-desk/skills\`. Do not
+Invoke \`runSkill('${def.id}', input, ctx)\` from \`@agentic-sales-hub/skills\`. Do not
 re-implement the logic inline — the one definition drives this skill, the MCP
 tool, and the eval runner.
 

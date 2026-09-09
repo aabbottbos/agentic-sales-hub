@@ -63,7 +63,7 @@ Label issues `tier:0` / `tier:1` / `tier:2` and let the workflows branch on it.
 
 One monorepo. The SDLC scaffolding is visible at the top level on purpose — a visitor should see the process before they see the code.
 
-deal-desk/
+agentic-sales-hub/
 
 ├─ CLAUDE.md                     \# conventions, commands, architecture, recurring mistakes  
 ├─ REVIEW.md                     \# PR review policy \+ severity definitions  
@@ -94,7 +94,7 @@ deal-desk/
 │  ├─ intents/  specs/  plans/   \# the artifact chain  
 │  └─ decisions/                 \# ADRs for irreversible calls  
 ├─ context/                      \# the substrate \+ synthetic corpus (see spec §4)  
-├─ packages/                     \# context-core · mcp-deal-desk · skills  
+├─ packages/                     \# context-core · mcp-agentic-sales-hub · skills  
 ├─ apps/surface/                 \# thin Next.js surface  
 └─ evals/                        \# golden/ · cases/ · runner/ · results/   
 ---

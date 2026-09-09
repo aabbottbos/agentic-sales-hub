@@ -6,8 +6,8 @@ import {
   type ContextLoader,
   type Finding,
   type RetrievalHit,
-} from "@deal-desk/context-core";
-import { runSkill } from "@deal-desk/skills";
+} from "@agentic-sales-hub/context-core";
+import { runSkill } from "@agentic-sales-hub/skills";
 import {
   scoreRetrieval,
   scoreReview,

@@ -1,5 +1,5 @@
 {
-  "name": "@deal-desk/evals",
+  "name": "@agentic-sales-hub/evals",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@deal-desk/context-core": "workspace:*",
-    "@deal-desk/skills": "workspace:*"
+    "@agentic-sales-hub/context-core": "workspace:*",
+    "@agentic-sales-hub/skills": "workspace:*"
   }
 }

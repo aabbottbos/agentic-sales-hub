@@ -16,7 +16,7 @@ Find and rank the org evidence, ICP material, and prior deal artifacts that matc
 
 ## How to run it
 
-Invoke `runSkill('find-evidence', input, ctx)` from `@deal-desk/skills`. Do not
+Invoke `runSkill('find-evidence', input, ctx)` from `@agentic-sales-hub/skills`. Do not
 re-implement the logic inline — the one definition drives this skill, the MCP
 tool, and the eval runner.
 

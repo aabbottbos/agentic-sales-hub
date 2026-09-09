@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/inbound.json",
+  "$id": "https://agentic-sales-hub.dev/schema/inbound.json",
   "title": "Inbound document (quarantined)",
   "description": "Counterparty-supplied. Read-only, quarantined, untrusted. Loader wraps the body in untrusted-content delimiters and verifies source_hash on read.",
   "type": "object",

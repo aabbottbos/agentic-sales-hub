@@ -1,5 +1,5 @@
 {
-  "name": "@deal-desk/skills",
+  "name": "@agentic-sales-hub/skills",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@deal-desk/context-core": "workspace:*",
+    "@agentic-sales-hub/context-core": "workspace:*",
     "ajv": "~8.17.1",
     "yaml": "~2.6.1"
   }

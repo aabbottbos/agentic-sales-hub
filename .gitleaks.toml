@@ -1,4 +1,4 @@
-# gitleaks config for deal-desk.
+# gitleaks config for agentic-sales-hub.
 # The synthetic corpus contains fake Salesforce-style IDs and fictional PII that
 # can trip default rules; detection stays active on the real risk surface.
 

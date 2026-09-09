@@ -1,11 +1,11 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createLoader, type ContextLoader } from "@deal-desk/context-core";
+import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
 import { runSkill, validateInput } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
-import type { Finding, RetrievalHit } from "@deal-desk/context-core";
+import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../..");

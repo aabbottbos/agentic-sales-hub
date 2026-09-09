@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/org-offering.json",
+  "$id": "https://agentic-sales-hub.dev/schema/org-offering.json",
   "title": "Org — offering",
   "type": "object",
   "allOf": [{ "$ref": "frontmatter-common.json#/$defs/commonFields" }],

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Stand up the foundational layer everything else in Deal Desk depends on: a
+Stand up the foundational layer everything else in Agentic Sales Hub depends on: a
 JSON-Schema-defined, git-native context model; a `context-core` loader that
 validates frontmatter, resolves skill read/write scopes, and enforces
 append-only rules; a synthetic corpus slice large enough to exercise all of it;
@@ -207,7 +207,7 @@ This capability explicitly does **not**:
   provable. (Exact scope is an open question below.)
 - Implement `call-prep`, `call-summary`, or `proposal-draft` — Phase 1, separate
   intent.
-- Implement the MCP server (`packages/mcp-deal-desk`), the trace viewer, the
+- Implement the MCP server (`packages/mcp-agentic-sales-hub`), the trace viewer, the
   context editor, or the eval board UI — Phase 1/2.
 - Provide any persistence UI or workflow for findings beyond what the eval runner
   needs.

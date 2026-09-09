@@ -5,7 +5,7 @@
 
 ## Context
 
-Deal Desk is an AI-native deal desk for a single seller — the layer between "we have a
+Agentic Sales Hub is an AI-native sales desk for a single seller — the layer between "we have a
 meeting" and "we have signed paper." The repo today is docs + process scaffolding only:
 no `package.json`, no `context/`, no eval runner, no CI, no hooks. Nothing downstream
 (`call-prep`, `call-summary`, `proposal-draft`, the MCP server, the web surface) can be
@@ -112,7 +112,7 @@ Single test: `pnpm vitest run <file>`. One package: `pnpm vitest --project <name
 ```
 packages/context-core/src/
   index.ts            # public barrel — the only entrypoint
-  types.ts errors.ts  # all exported types; typed error classes (each extends DealDeskError, has .code)
+  types.ts errors.ts  # all exported types; typed error classes (each extends AshError, has .code)
   schema/             load.ts registry.ts validate.ts        # load + compile JSON Schemas, cross-file $ref
   frontmatter/        parse.ts (gray-matter) classify.ts     # path -> {schemaType, mutability}
   fs/                 read.ts walk.ts append-only.ts
@@ -201,7 +201,7 @@ corpus validation, and the eval). `scripts/rehash-inbound.ts` regenerates after 
 ## 3. `context/schema/` — the published schema
 
 - **JSON Schema draft 2020-12** (`ajv/dist/2020`). Stable `$id` per file:
-  `https://deal-desk.dev/schema/<name>.json` (URN-style, never fetched, used for `$ref`).
+  `https://agentic-sales-hub.dev/schema/<name>.json` (URN-style, never fetched, used for `$ref`).
 - **Composition:** `frontmatter-common.json` defines `$defs.commonFields`; every other schema
   `allOf: [ { $ref: "frontmatter-common.json#/$defs/commonFields" }, { …type-specific } ]`.
   `unevaluatedProperties: false` at leaf level to catch typos (drop it if ajv fights — see §11).
@@ -365,7 +365,7 @@ packages/skills/src/
    ("invoke `runSkill('<id>')` from `packages/skills`; do not freelance").
    `scripts/sync-claude-skills.ts` regenerates it; **CI checks for drift**. Only ids in a
    `PRODUCT_SKILL_IDS` constant are managed — hand-authored `write-intent`/`write-spec` untouched.
-2. **The future MCP tool** — Phase 1 `packages/mcp-deal-desk` calls `loadSkill(id)` for grants,
+2. **The future MCP tool** — Phase 1 `packages/mcp-agentic-sales-hub` calls `loadSkill(id)` for grants,
    inputs, output schema. Nothing to build now; shape fixed so Phase 1 doesn't refactor.
 3. **The eval runner** — `evals/runner` calls `runSkill(id, input, ctx)` directly; reads
    `eval_suite` from the definition to locate cases.

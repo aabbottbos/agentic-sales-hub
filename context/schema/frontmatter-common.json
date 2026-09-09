@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/frontmatter-common.json",
+  "$id": "https://agentic-sales-hub.dev/schema/frontmatter-common.json",
   "title": "Common frontmatter",
   "description": "Fields every context file's YAML frontmatter carries. Composed into every type-specific schema via allOf.",
   "$defs": {

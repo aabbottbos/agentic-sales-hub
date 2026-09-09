@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deal-desk.dev/schema/retrieval-result.json",
+  "$id": "https://agentic-sales-hub.dev/schema/retrieval-result.json",
   "title": "Retrieval result (find-evidence output contract)",
   "description": "OUTPUT-CONTRACT schema: validates a retrieval skill's ranked result list, not a file on disk.",
   "type": "array",

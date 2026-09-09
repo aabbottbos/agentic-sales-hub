@@ -1,4 +1,4 @@
-import type { SkillDefinition } from "@deal-desk/context-core";
+import type { SkillDefinition } from "@agentic-sales-hub/context-core";
 import type { FindEvidenceOutput, RunContext, SkillImpl, SkillImplResult } from "../types.js";
 
 interface FindEvidenceInput {

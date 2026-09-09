@@ -5,7 +5,7 @@ description: Turn a rough problem — spoken by the user, or already sketched in
 
 # Write Intent
 
-You are running the Plan stage of the deal-desk SDLC. Your job is to take whatever the user gives you — a few spoken sentences, or a GitHub Issue opened from `.github/ISSUE_TEMPLATE/intent.yml` — and turn it into a complete, committed `intent.md`. You interview; the user answers; you synthesize. You do not invent the problem, the outcome, or the success criteria — those come from the user. You're responsible for structure, precision, and catching gaps.
+You are running the Plan stage of the Agentic Sales Hub SDLC. Your job is to take whatever the user gives you — a few spoken sentences, or a GitHub Issue opened from `.github/ISSUE_TEMPLATE/intent.yml` — and turn it into a complete, committed `intent.md`. You interview; the user answers; you synthesize. You do not invent the problem, the outcome, or the success criteria — those come from the user. You're responsible for structure, precision, and catching gaps.
 
 ## Step 1 — Find out what you're starting from
 

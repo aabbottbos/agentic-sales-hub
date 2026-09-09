@@ -248,7 +248,7 @@ Three layers, and one sentence that kills v1's open question #2:
 └───────────────────────────┬──────────────────────────────────┘
                             │
 ┌───────────────────────────▼──────────────────────────────────┐
-│  packages/mcp-deal-desk   — MCP server                       │
+│  packages/mcp-agentic-sales-hub   — MCP server                       │
 │    tools: context.read · context.search · artifact.write     │
 │           skill.run · trace.get                              │
 │    enforces context grants, emits traces                     │
@@ -263,7 +263,7 @@ Three layers, and one sentence that kills v1's open question #2:
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Why the MCP server is the strategic piece:** it's the distribution channel. Anyone with Claude can point `mcp-deal-desk` at their own `context/` directory and get the whole thing, with zero hosting, zero signup, zero data leaving their machine. For a credibility asset that is worth more than a hosted app with three users — and if you ever do want a commercial product, "already installed" is a much better starting position than "please create an account."
+**Why the MCP server is the strategic piece:** it's the distribution channel. Anyone with Claude can point `mcp-agentic-sales-hub` at their own `context/` directory and get the whole thing, with zero hosting, zero signup, zero data leaving their machine. For a credibility asset that is worth more than a hosted app with three users — and if you ever do want a commercial product, "already installed" is a much better starting position than "please create an account."
 
 ---
 
@@ -336,7 +336,7 @@ Budget **a full day** for this. Its quality determines whether the demo persuade
 | Phase | Dates | Deliverable | Done when |
 |---|---|---|---|
 | **0 — Substrate** | Sep 8 – Sep 19 | Context schema, synthetic corpus v1, `context-core`, `find-evidence` + `sow-review`, eval harness with the golden set | `sow-review` hits blocker recall 1.00 on both labeled redlines, with citations, and the eval runs in CI |
-| **1 — Deal spine** | Sep 22 – Oct 24 | `call-prep`, `call-summary`, `proposal-draft`; `mcp-deal-desk` server; trace emission; outcome records | You can run a full deal end-to-end in Claude Code against the corpus, and every artifact cites its sources |
+| **1 — Deal spine** | Sep 22 – Oct 24 | `call-prep`, `call-summary`, `proposal-draft`; `mcp-agentic-sales-hub` server; trace emission; outcome records | You can run a full deal end-to-end in Claude Code against the corpus, and every artifact cites its sources |
 | **2 — Surface** | Oct 27 – Nov 21 | Next.js surface: context editor, trace viewer, eval board. Agent SDK runtime behind it. Injection controls implemented and tested | A stranger can drive the whole thing from the browser and see *why* each artifact says what it says |
 | **3 — Publish** | Nov 24 – Dec 19 | Public repo, README, context spec as a standalone doc, build log series, ≤5-min demo, packaged MCP server | All six ship criteria in §2 are true |
 

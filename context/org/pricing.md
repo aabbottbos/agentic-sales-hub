@@ -53,5 +53,5 @@ discount, because the engagement is already fixed-scope and thin-margin.
 | VP Sales | 25% |
 | CFO (recorded exception) | above 25% |
 
-A discount above 25%, or any services discount above 15%, is a deal-desk
+A discount above 25%, or any services discount above 15%, is a pricing-committee
 exception and must be recorded with a reason.

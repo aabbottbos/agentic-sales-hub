@@ -1,6 +1,6 @@
 # The golden set
 
-Ground truth for the Deal Desk eval suite. Protected — it changes only through a
+Ground truth for the Agentic Sales Hub eval suite. Protected — it changes only through a
 reviewed PR (`.claude/settings.json` denies writes; a protect-paths hook blocks
 `rm`/`mv`), because a golden set you can quietly edit is not a golden set.
 

@@ -1,5 +1,5 @@
 /**
- * All types exported from @deal-desk/context-core. Kept in one file so the public
+ * All types exported from @agentic-sales-hub/context-core. Kept in one file so the public
  * surface is greppable in a single place.
  */
 
