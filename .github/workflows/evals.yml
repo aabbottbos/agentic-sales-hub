@@ -60,6 +60,23 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            if (!fs.existsSync('this-run.json')) {
+              // `pnpm eval` crashed before writing the report (e.g. the llm seam
+              // threw because ANTHROPIC_API_KEY is absent on a fork PR). The
+              // "Fail on gate breach" step below already fails the job; leave a
+              // note instead of crashing this step with an ENOENT.
+              const body = '## Eval results\n\nThe eval run did not produce a report — `pnpm eval` errored before writing `this-run.json` (commonly a missing `ANTHROPIC_API_KEY` secret on a fork PR; the suite fails closed). A maintainer must re-run with the secret available.';
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              });
+              const mine = comments.find((c) => c.user.type === 'Bot' && c.body.startsWith('## Eval results'));
+              if (mine) {
+                await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+              } else {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+              }
+              return;
+            }
             const cur = JSON.parse(fs.readFileSync('this-run.json', 'utf8'));
             const lines = ['## Eval results', ''];
             for (const [name, suite] of Object.entries(cur.suites)) {
