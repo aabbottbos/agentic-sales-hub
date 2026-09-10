@@ -1,0 +1,9 @@
+{
+  "id": "negotiation",
+  "skill": "call-summary",
+  "input": {
+    "meeting_path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-08-28-negotiation.md"
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "expected_commitments_ref": "expected/negotiation.commitments.json"
+}
