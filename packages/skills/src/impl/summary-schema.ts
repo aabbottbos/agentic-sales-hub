@@ -10,6 +10,8 @@ const Ajv2020 = ((ajv2020Module as unknown as { default?: unknown }).default ??
 
 export interface Citation {
   path: string;
+  /** The verbatim supporting text the model returns; the skill computes `span` from it. */
+  quote: string;
   span: [number, number];
 }
 

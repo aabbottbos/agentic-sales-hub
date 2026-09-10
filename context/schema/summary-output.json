@@ -68,9 +68,11 @@
       "additionalProperties": false
     },
     "citation": {
+      "description": "quote is the verbatim supporting text the model returns; span is a [start, end) byte range into the LF-normalized note file, computed by the skill from quote (the model does not count offsets).",
       "type": "object",
       "properties": {
         "path": { "type": "string", "minLength": 1 },
+        "quote": { "type": "string", "minLength": 1 },
         "span": {
           "type": "array",
           "prefixItems": [
@@ -81,7 +83,7 @@
           "maxItems": 2
         }
       },
-      "required": ["path", "span"],
+      "required": ["path", "quote", "span"],
       "additionalProperties": false
     }
   }

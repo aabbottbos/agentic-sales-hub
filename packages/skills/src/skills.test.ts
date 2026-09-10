@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it, beforeAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -180,14 +179,8 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
     vi.restoreAllMocks();
   });
 
-  async function spanFor(phrase: string): Promise<[number, number]> {
-    const raw = (await readFile(join(repoRoot, discoveryNote), "utf8")).replace(/\r\n/g, "\n");
-    const i = raw.indexOf(phrase);
-    return [i, i + phrase.length];
-  }
-
   it("validates output against summary-output.json and sets citationsValid", async () => {
-    const span = await spanFor("exception queue");
+    const quote = "ONE exception queue";
     const stub = JSON.stringify({
       summary: "Acme wants one exception queue.",
       commitments: [],
@@ -195,11 +188,11 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
         {
           text: "SE technical deep dive with Acme IT",
           owner: "us",
-          citation: { path: discoveryNote, span },
+          citation: { path: discoveryNote, quote },
         },
       ],
       context_deltas: [],
-      citations: [{ path: discoveryNote, span }],
+      citations: [{ path: discoveryNote, quote }],
       unsourced_claims: [],
     });
     vi.spyOn(llm, "complete").mockResolvedValue(stub);
@@ -214,13 +207,13 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
     expect((result.output as { summary: string }).summary).toContain("exception queue");
   });
 
-  it("fails the run when a citation span does not resolve", async () => {
+  it("fails the run when a citation quote is not in the note", async () => {
     const stub = JSON.stringify({
       summary: "x",
       commitments: [],
       next_steps: [],
       context_deltas: [],
-      citations: [{ path: discoveryNote, span: [999999, 1000000] }],
+      citations: [{ path: discoveryNote, quote: "a phrase that does not appear anywhere" }],
       unsourced_claims: [],
     });
     vi.spyOn(llm, "complete").mockResolvedValue(stub);

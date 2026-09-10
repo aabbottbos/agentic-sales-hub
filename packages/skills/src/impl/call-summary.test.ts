@@ -28,18 +28,17 @@ const DISCOVERY_NOTE =
   "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-07-14-discovery.md";
 
 describe("validateSummaryOutput", () => {
+  const cit = {
+    path: DISCOVERY_NOTE,
+    quote: "Midwest Freight",
+    span: [10, 40] as [number, number],
+  };
   const good: SummaryOutput = {
     summary: "We ran discovery with Acme. [unsourced] budget is soft.",
-    commitments: [
-      {
-        text: "Send the Midwest Freight case study",
-        owner: "us",
-        citation: { path: DISCOVERY_NOTE, span: [10, 40] },
-      },
-    ],
+    commitments: [{ text: "Send the Midwest Freight case study", owner: "us", citation: cit }],
     next_steps: [],
     context_deltas: [],
-    citations: [{ path: DISCOVERY_NOTE, span: [10, 40] }],
+    citations: [cit],
     unsourced_claims: ["budget is soft"],
   };
 
@@ -67,11 +66,12 @@ describe("validateSummaryOutput", () => {
 });
 
 describe("call-summary prompts", () => {
-  it("system prompt states the output contract and the citation rule", () => {
+  it("system prompt states the output contract and the verbatim-quote rule", () => {
     const s = buildSystemPrompt();
     expect(s).toMatch(/JSON object/i);
     expect(s).toMatch(/\[unsourced\]/);
-    expect(s).toMatch(/offset|span/i);
+    expect(s).toMatch(/quote/i);
+    expect(s).toMatch(/exact substring/i);
   });
 
   it("user prompt embeds the note under a clear delimiter and gives its path", () => {
@@ -85,8 +85,8 @@ describe("call-summary prompts", () => {
     expect(u).toMatch(/BEGIN MEETING NOTE/);
   });
 
-  it("user prompt does not prepend anything inside the note markers", () => {
-    const note = "first char matters for offsets";
+  it("user prompt embeds the note text verbatim between the markers", () => {
+    const note = "the exact substring the model must quote from";
     const u = buildUserPrompt("p.md", note);
     const start = u.indexOf("<<<BEGIN MEETING NOTE>>>\n") + "<<<BEGIN MEETING NOTE>>>\n".length;
     const end = u.indexOf("\n<<<END MEETING NOTE>>>");
@@ -111,26 +111,21 @@ describe("call-summary impl (stubbed model)", () => {
     vi.restoreAllMocks();
   });
 
-  function spanFor(raw: string, phrase: string): [number, number] {
-    const i = raw.replace(/\r\n/g, "\n").indexOf(phrase);
-    return [i, i + phrase.length];
-  }
-
-  it("returns a schema-valid output and only reads the one note", async () => {
-    const raw = await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8");
-    const span = spanFor(raw, "Midwest Freight");
+  it("computes citation spans from the model's verbatim quotes", async () => {
+    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const quote = "send Midwest Freight case study";
     const stub = JSON.stringify({
       summary: "Discovery call with Acme Logistics about a single exception queue.",
       commitments: [
         {
           text: "Send Midwest Freight case study",
           owner: "us",
-          citation: { path: DISCOVERY_NOTE, span },
+          citation: { path: DISCOVERY_NOTE, quote },
         },
       ],
       next_steps: [],
       context_deltas: [],
-      citations: [{ path: DISCOVERY_NOTE, span }],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
       unsourced_claims: [],
     });
     vi.spyOn(llm, "complete").mockResolvedValue(stub);
@@ -141,10 +136,34 @@ describe("call-summary impl (stubbed model)", () => {
       { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
       def,
     );
+    const out = res.output as SummaryOutput;
 
     expect(res.contextRead).toEqual([DISCOVERY_NOTE]);
-    expect(res.scopeResolved).toContain(DISCOVERY_NOTE);
-    expect((res.output as SummaryOutput).summary.length).toBeGreaterThan(0);
+    const [s, e] = out.commitments[0].citation.span;
+    expect(raw.slice(s, e)).toBe(quote);
+    expect(out.citations[0].span[0]).toBeGreaterThanOrEqual(0);
+  });
+
+  it("gives an unlocatable quote an out-of-range span (fails the citation gate, no crash)", async () => {
+    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, quote: "this phrase is not in the note at all" }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+    expect(out.citations[0].span[0]).toBeGreaterThanOrEqual(raw.length);
   });
 
   it("passes the whole LF-normalized file as the note text", async () => {

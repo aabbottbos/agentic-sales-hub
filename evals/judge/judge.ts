@@ -35,28 +35,38 @@ function median(xs: number[]): number {
   return ((s[m - 1] as number) + (s[m] as number)) / 2;
 }
 
-/** Pull the first flat `{...}` object from a judge response and read the four scores. */
+/**
+ * Read the four scores from a judge response. Tries each `{...}` object in the
+ * text (last first — the judge may write prose with braces before the answer)
+ * and returns the first that carries all four dimensions as 1-5 numbers.
+ */
 function parseScores(text: string): RubricScores | null {
-  const m = text.match(/\{[^}]*\}/);
-  if (!m) return null;
-  let o: Record<string, unknown>;
-  try {
-    o = JSON.parse(m[0]) as Record<string, unknown>;
-  } catch {
-    return null;
+  const candidates = text.match(/\{[^{}]*\}/g);
+  if (!candidates) return null;
+  for (const raw of candidates.reverse()) {
+    let o: Record<string, unknown>;
+    try {
+      o = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const out = {} as RubricScores;
+    let ok = true;
+    for (const k of DIMENSIONS) {
+      const v = o[k];
+      if (typeof v !== "number" || !Number.isFinite(v) || v < 1 || v > 5) {
+        ok = false;
+        break;
+      }
+      out[k] = v;
+    }
+    if (ok) return out;
   }
-  const out = {} as RubricScores;
-  for (const k of DIMENSIONS) {
-    const v = o[k];
-    if (typeof v !== "number" || !Number.isFinite(v) || v < 1 || v > 5) return null;
-    out[k] = v;
-  }
-  return out;
+  return null;
 }
 
 interface JudgeConfig {
   model: string;
-  temperature: number;
   max_tokens: number;
   attempts: number;
 }
@@ -97,7 +107,6 @@ export async function scoreRubric(
       user,
       model: c.model,
       maxTokens: c.max_tokens,
-      temperature: c.temperature,
     });
     const s = parseScores(text);
     if (s) got.push(s);

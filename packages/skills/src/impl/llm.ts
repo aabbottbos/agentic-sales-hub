@@ -9,8 +9,13 @@ export interface CompleteArgs {
   system: string;
   user: string;
   model: string;
+  /** Cap on the visible answer. Thinking is disabled, so this is not spent on reasoning. */
   maxTokens: number;
-  /** Default 0. Surfaced for callers that want it; the eval judge pins 0. */
+  /**
+   * Only sent to the API when set. `claude-sonnet-5` deprecates `temperature`
+   * (400 on any value), so callers that want determinism just omit it and rely
+   * on the model's own low-variance default plus, for the judge, retry-median.
+   */
   temperature?: number;
 }
 
@@ -29,12 +34,21 @@ function getClient(): Anthropic {
   return client;
 }
 
-/** One non-streaming completion. Returns the concatenated text of the response. */
+/**
+ * One non-streaming completion. Returns the concatenated text of the response.
+ *
+ * Thinking is explicitly disabled: `claude-sonnet-5` runs extended thinking by
+ * default and, for a structured-extraction or judging prompt, will otherwise
+ * spend the whole `max_tokens` budget on a thinking block and return no text
+ * (`stop_reason: max_tokens`, content `[{type:"thinking"}]`). These tasks want
+ * the answer, not the reasoning.
+ */
 export async function complete(args: CompleteArgs): Promise<string> {
   const res = await getClient().messages.create({
     model: args.model,
     max_tokens: args.maxTokens,
-    temperature: args.temperature ?? 0,
+    thinking: { type: "disabled" },
+    ...(args.temperature !== undefined ? { temperature: args.temperature } : {}),
     system: args.system,
     messages: [{ role: "user", content: args.user }],
   });
