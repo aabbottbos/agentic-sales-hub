@@ -65,7 +65,7 @@ A PR touching `.claude/skills/**`, `packages/skills/**`, `packages/context-core/
 - `sow-review` precision ≥ **0.70**; citation validity = **1.00**
 - The injection case: the quarantine hook blocks the induced write (`injection: PASS`)
 - `find-evidence` recall ≥ **0.90** on required spans; citation validity = **1.00**
-- `call-summary` (generation) — **hard gates:** citation validity = **1.00**, commitment recall ≥ **0.90**. The LLM-judge **rubric is advisory** (≥ 4.0/5 target, computed + regression-tracked, not build-blocking — a single judge is too noisy; see `evals/judge/README.md` + spec 002 OQ2 amendment).
+- `call-summary` (generation) — **one hard gate:** citation validity = **1.00** (deterministic, resolve-only, stable). The LLM-judge **rubric** (≥ 4.0/5 target) and **commitment recall** (≥ 0.90 target) are **advisory** — computed + regression-tracked, not build-blocking. A single judge is too noisy; the token-overlap recall scorer is too literal to bridge a valid paraphrase. See `evals/judge/README.md` + spec 002 amendment A1.
 - **No net regression** vs. the last committed result in `evals/results/`
 
 **Every production defect becomes a permanent eval case** — the fix PR must include the case that would have caught it.

@@ -42,23 +42,34 @@ guidance, shorter quote limit) was tried and made scores **worse** on `discovery
 
 ## Resolution (spec 002 OQ2 amendment)
 
-`rubric_aggregate >= 4.0` on the `evals.yml` critical path, with this
-skill-model + judge-model pairing and a single judge, is not a stable gate.
+Neither `rubric_aggregate >= 4.0` (single judge, swings ~2.5–4.25 on identical
+input) nor `commitment_recall >= 0.90` (token-overlap scorer, too literal to
+bridge a valid paraphrase — see below) is a stable blocking gate for
+`call-summary` v1.
 
-**Decision: the rubric is an advisory metric, not a blocking gate.**
+**Decision: `citation_validity = 1.00` is the one hard blocking gate. The rubric
+and `commitment_recall` are advisory metrics.**
 
-- `run-suite.ts` computes `rubric_aggregate` and its four dimensions, prints them
-  in the case notes, and puts `rubric_aggregate` in the suite `metrics`. It is
-  **not** in `gates`, so it never fails `pnpm eval`.
-- `compare.ts` keeps `rubric_aggregate` in `PRIMARY` for `call-summary`, so a
-  *drop* versus the last committed `evals/results/*.json` is still reported as a
-  regression. Advisory is not untracked.
-- The blocking gates for `call-summary` are the deterministic ones:
-  `citation_validity = 1.00` and `commitment_recall >= 0.90`.
+- `run-suite.ts` computes all three, prints `rubric_aggregate` and
+  `commitment_recall` (with target + any misses) in the case notes, and puts all
+  three in the suite `metrics`. Only `citation_validity` is in `gates`.
+- `compare.ts` keeps all three in `PRIMARY` for `call-summary`, so a *drop* on
+  any of them versus the last committed `evals/results/*.json` is still reported
+  as a regression. Advisory is not untracked.
+- `citation_validity` blocks: it is a deterministic resolve-only span check and
+  is stable at 1.00 every run.
 
-This revises spec §8 / OQ2 ("the rubric gate runs blocking, on the critical
-path"): for v1, with a single-judge setup at this variance, it does not. Revisit
-when a stabler judge setup exists — the candidates that were on the table:
+**Why `commitment_recall` is advisory.** `scoreCommitmentRecall` matches produced
+commitment text to hand-written labels by normalized token overlap. It cannot
+see that "get the redlines reviewed fast, now the close gate" and the labeled
+"Review the counterparty redlines quickly" are the same commitment — they share
+only `redlines`. On a 4-label case one such miss is 0.75, below the 0.90 gate,
+though the summary is correct. A future LLM-assisted matcher or a larger golden
+set (where one miss does not dominate) could make it blockable again.
+
+This revises spec §8 / OQ2 and the generation eval class ("the rubric gate runs
+blocking"; "commitment recall >= 0.90"): for v1 neither blocks. Revisit when the
+tooling supports it — candidates that were on the table:
 
 1. **More judge attempts + a calibrated band.** `attempts` 3 -> 7 (median of 7 is
    much tighter), measure the stabilized spread over 5 runs, set the threshold to

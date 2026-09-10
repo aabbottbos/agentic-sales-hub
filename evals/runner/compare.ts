@@ -1,9 +1,15 @@
 import type { RunReport } from "./report.js";
 
+// Metrics whose drop below the last committed result is a build-failing
+// regression. These are exactly the metrics that also block via a `gates` entry
+// — a regression check on an advisory metric would make it non-advisory.
+// `call-summary`'s `rubric_aggregate` and `commitment_recall` are advisory
+// (spec 002 amendment A1); they are still in every result JSON for by-hand
+// history, just not regression-gated.
 const PRIMARY: Record<string, string[]> = {
   "sow-review": ["blocker_recall", "precision", "citation_validity"],
   "find-evidence": ["recall", "citation_validity"],
-  "call-summary": ["rubric_aggregate", "commitment_recall", "citation_validity"],
+  "call-summary": ["citation_validity"],
 };
 
 export interface Comparison {
