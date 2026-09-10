@@ -4,6 +4,6 @@ export default defineConfig({
   test: {
     name: "evals",
     environment: "node",
-    include: ["runner/**/*.test.ts", "scorers/**/*.test.ts"],
+    include: ["runner/**/*.test.ts", "scorers/**/*.test.ts", "judge/**/*.test.ts"],
   },
 });

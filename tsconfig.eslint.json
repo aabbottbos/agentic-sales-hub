@@ -9,6 +9,7 @@
     "packages/*/scripts/**/*.ts",
     "packages/*/test/**/*.ts",
     "evals/runner/**/*.ts",
-    "evals/scorers/**/*.ts"
+    "evals/scorers/**/*.ts",
+    "evals/judge/**/*.ts"
   ]
 }
