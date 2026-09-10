@@ -44,9 +44,14 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # call-summary's advisory rubric and its skill call both need
+      # ANTHROPIC_API_KEY. If the secret is absent (e.g. a fork PR), the llm seam
+      # throws and `pnpm eval` exits non-zero — the suite FAILS CLOSED, it does
+      # not silently pass. A maintainer re-runs with the secret available.
       - name: Run eval suite
         env:
           CI: "true"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: pnpm eval --suite all --json-out this-run.json || echo "EVAL_FAILED=1" >> "$GITHUB_ENV"
 
       - name: Compare against main and comment
