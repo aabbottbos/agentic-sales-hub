@@ -1,10 +1,12 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { readFile } from "node:fs/promises";
+import { afterEach, describe, expect, it, beforeAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
 import { runSkill, validateInput } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
+import * as llm from "./impl/llm.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -168,5 +170,78 @@ describe("sow-review (deterministic)", () => {
       expect(e).toBeGreaterThan(s);
       expect(e).toBeLessThanOrEqual(body.length);
     }
+  });
+});
+
+describe("runSkill generation branch (call-summary, stubbed)", () => {
+  const discoveryNote = `${oppDir}/meetings/2026-07-14-discovery.md`;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function spanFor(phrase: string): Promise<[number, number]> {
+    const raw = (await readFile(join(repoRoot, discoveryNote), "utf8")).replace(/\r\n/g, "\n");
+    const i = raw.indexOf(phrase);
+    return [i, i + phrase.length];
+  }
+
+  it("validates output against summary-output.json and sets citationsValid", async () => {
+    const span = await spanFor("exception queue");
+    const stub = JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [
+        {
+          text: "SE technical deep dive with Acme IT",
+          owner: "us",
+          citation: { path: discoveryNote, span },
+        },
+      ],
+      context_deltas: [],
+      citations: [{ path: discoveryNote, span }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const result = await runSkill(
+      "call-summary",
+      { meeting_path: discoveryNote },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+    );
+
+    expect(result.citationsValid).toBe(true);
+    expect((result.output as { summary: string }).summary).toContain("exception queue");
+  });
+
+  it("fails the run when a citation span does not resolve", async () => {
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: discoveryNote, span: [999999, 1000000] }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const result = await runSkill(
+      "call-summary",
+      { meeting_path: discoveryNote },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+    );
+
+    expect(result.citationsValid).toBe(false);
+  });
+
+  it("throws when the impl output does not satisfy the schema", async () => {
+    vi.spyOn(llm, "complete").mockResolvedValue('{"summary":"x"}');
+    await expect(
+      runSkill(
+        "call-summary",
+        { meeting_path: discoveryNote },
+        { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      ),
+    ).rejects.toThrow(/failed schema|does not satisfy/i);
   });
 });
