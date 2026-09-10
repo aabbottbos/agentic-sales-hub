@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-sales-hub.dev/schema/summary-output.json",
+  "title": "Call summary (call-summary output contract)",
+  "description": "OUTPUT-CONTRACT schema: validates the call-summary skill's structured return, not a file on disk.",
+  "type": "object",
+  "properties": {
+    "summary": { "type": "string", "minLength": 1 },
+    "commitments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "context_deltas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "enum": [
+              "stage",
+              "close_date",
+              "amount",
+              "champion",
+              "risk",
+              "competitor",
+              "next_meeting",
+              "other"
+            ]
+          },
+          "observation": { "type": "string", "minLength": 1 },
+          "citation": { "$ref": "#/$defs/citation" }
+        },
+        "required": ["field", "observation", "citation"],
+        "additionalProperties": false
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/citation" }
+    },
+    "unsourced_claims": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "required": [
+    "summary",
+    "commitments",
+    "next_steps",
+    "context_deltas",
+    "citations",
+    "unsourced_claims"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "item": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "owner": { "enum": ["us", "counterparty", "unknown"] },
+        "citation": { "$ref": "#/$defs/citation" }
+      },
+      "required": ["text", "owner", "citation"],
+      "additionalProperties": false
+    },
+    "citation": {
+      "description": "quote is the verbatim supporting text the model returns; span is a [start, end) byte range into the LF-normalized note file, computed by the skill from quote (the model does not count offsets).",
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "quote": { "type": "string", "minLength": 1 },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["path", "quote", "span"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -13,5 +13,7 @@ export type {
   TraceEntry,
   FindEvidenceOutput,
   SowReviewOutput,
+  SummaryOutput,
+  CallSummaryOutput,
 } from "./types.js";
 export type { SkillDefinition } from "@agentic-sales-hub/context-core";

@@ -26,6 +26,7 @@ export default tseslint.config(
       "packages/**/test/**/*.ts",
       "evals/runner/**/*.ts",
       "evals/scorers/**/*.ts",
+      "evals/judge/**/*.ts",
     ],
     languageOptions: {
       parserOptions: {

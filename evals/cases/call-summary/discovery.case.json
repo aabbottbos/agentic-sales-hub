@@ -1,0 +1,9 @@
+{
+  "id": "discovery",
+  "skill": "call-summary",
+  "input": {
+    "meeting_path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-07-14-discovery.md"
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "expected_commitments_ref": "expected/discovery.commitments.json"
+}

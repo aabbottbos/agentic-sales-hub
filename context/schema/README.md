@@ -40,9 +40,10 @@ a path to a schema type:
 
 A mis-filed file is a validation error, not a silent pass.
 
-`finding.json` and `retrieval-result.json` are **output-contract** schemas — they validate a
-skill's output (`sow-review` findings, `find-evidence` results), not a file on disk. They
-live here because the contract is part of the published spec.
+`finding.json`, `retrieval-result.json`, and `summary-output.json` are **output-contract**
+schemas — they validate a skill's output (`sow-review` findings, `find-evidence` results,
+`call-summary` summaries), not a file on disk. They live here because the contract is part
+of the published spec.
 
 ## Composition
 

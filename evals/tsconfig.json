@@ -5,6 +5,6 @@
     "rootDir": "."
   },
   "references": [{ "path": "../packages/context-core" }, { "path": "../packages/skills" }],
-  "include": ["runner/**/*.ts", "scorers/**/*.ts"],
+  "include": ["runner/**/*.ts", "scorers/**/*.ts", "judge/**/*.ts"],
   "exclude": ["**/*.test.ts", "dist", "golden", "cases", "results"]
 }

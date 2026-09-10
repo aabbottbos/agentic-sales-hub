@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@agentic-sales-hub/context-core": "workspace:*",
+    "@anthropic-ai/sdk": "~0.124.0",
     "ajv": "~8.17.1",
     "yaml": "~2.6.1"
   }

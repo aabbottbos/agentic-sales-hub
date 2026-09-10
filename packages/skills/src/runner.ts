@@ -1,10 +1,13 @@
 import type { SkillDefinition } from "@agentic-sales-hub/context-core";
 import { loadSkill } from "./registry.js";
+import { callSummaryImpl } from "./impl/call-summary.js";
 import { findEvidenceImpl } from "./impl/find-evidence.js";
 import { sowReviewImpl } from "./impl/sow-review.js";
+import { validateSummaryOutput } from "./impl/summary-schema.js";
 import type { RunContext, SkillImpl, SkillRunResult } from "./types.js";
 
 const IMPLS: Record<string, SkillImpl> = {
+  "call-summary": callSummaryImpl as unknown as SkillImpl,
   "find-evidence": findEvidenceImpl as unknown as SkillImpl,
   "sow-review": sowReviewImpl as unknown as SkillImpl,
 };
@@ -83,6 +86,16 @@ export async function runSkill(
     if (def.output.requires_citations) {
       citationsValid = await checkFindingCitations(ctx, findings);
     }
+  } else if (def.tier === "generation") {
+    const check = validateSummaryOutput(result.output);
+    if (!check.valid) {
+      throw new Error(
+        `${id} output does not satisfy ${def.output.schema}: ${check.errors.slice(0, 5).join("; ")}`,
+      );
+    }
+    if (def.output.requires_citations) {
+      citationsValid = await checkGenerationCitations(ctx, result.output as SummaryLike);
+    }
   }
 
   return {
@@ -108,10 +121,45 @@ interface ReviewFinding {
   citation: { path: string; span: [number, number] };
 }
 
+interface CitationRef {
+  path: string;
+  span: [number, number];
+}
+
+interface SummaryLike {
+  commitments: { citation: CitationRef }[];
+  next_steps: { citation: CitationRef }[];
+  context_deltas: { citation: CitationRef }[];
+  citations: CitationRef[];
+}
+
 async function checkRetrievalCitations(ctx: RunContext, hits: RetrievalLike[]): Promise<boolean> {
   for (const hit of hits) {
     try {
       await ctx.loader.resolveCitation({ path: hit.path, span: hit.span });
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Generation citation validity = resolve-only over the flattened citation set
+ * (`citations[]` plus every commitment / next_step / context_delta `.citation`).
+ * There is no `position` to verify as in review — the "does the span support the
+ * claim" question is the rubric's grounding dimension (spec 002 JC #8).
+ */
+async function checkGenerationCitations(ctx: RunContext, out: SummaryLike): Promise<boolean> {
+  const all: CitationRef[] = [
+    ...out.citations,
+    ...out.commitments.map((c) => c.citation),
+    ...out.next_steps.map((c) => c.citation),
+    ...out.context_deltas.map((c) => c.citation),
+  ];
+  for (const c of all) {
+    try {
+      await ctx.loader.resolveCitation({ path: c.path, span: c.span });
     } catch {
       return false;
     }

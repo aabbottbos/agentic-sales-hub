@@ -1,10 +1,11 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { afterEach, describe, expect, it, beforeAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
 import { runSkill, validateInput } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
+import * as llm from "./impl/llm.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,15 +25,25 @@ beforeAll(async () => {
 });
 
 describe("skill registry", () => {
-  it("loads both product skill definitions", async () => {
+  it("loads all three product skill definitions", async () => {
     const skills = await listSkills();
-    expect(skills.map((s) => s.id).sort()).toEqual(["find-evidence", "sow-review"]);
+    expect(skills.map((s) => s.id).sort()).toEqual(["call-summary", "find-evidence", "sow-review"]);
   });
 
   it("sow-review has no write grant", async () => {
     const def = await loadSkill("sow-review");
     expect(def.tier).toBe("review");
     expect(def.context_grants.write).toBeUndefined();
+  });
+
+  it("call-summary is a generation skill, meetings read grant only, no write grant", async () => {
+    const def = await loadSkill("call-summary");
+    expect(def.tier).toBe("generation");
+    expect(def.context_grants.read).toEqual(["context/accounts/*/opportunities/*/meetings/**"]);
+    expect(def.context_grants.write).toBeUndefined();
+    expect(def.tools).toEqual(["context.read"]);
+    expect(def.output.schema).toBe("context/schema/summary-output.json");
+    expect(def.output.requires_citations).toBe(true);
   });
 
   it("throws for an unknown skill id", async () => {
@@ -158,5 +169,72 @@ describe("sow-review (deterministic)", () => {
       expect(e).toBeGreaterThan(s);
       expect(e).toBeLessThanOrEqual(body.length);
     }
+  });
+});
+
+describe("runSkill generation branch (call-summary, stubbed)", () => {
+  const discoveryNote = `${oppDir}/meetings/2026-07-14-discovery.md`;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("validates output against summary-output.json and sets citationsValid", async () => {
+    const quote = "ONE exception queue";
+    const stub = JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [
+        {
+          text: "SE technical deep dive with Acme IT",
+          owner: "us",
+          citation: { path: discoveryNote, quote },
+        },
+      ],
+      context_deltas: [],
+      citations: [{ path: discoveryNote, quote }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const result = await runSkill(
+      "call-summary",
+      { meeting_path: discoveryNote },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+    );
+
+    expect(result.citationsValid).toBe(true);
+    expect((result.output as { summary: string }).summary).toContain("exception queue");
+  });
+
+  it("fails the run when a citation quote is not in the note", async () => {
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: discoveryNote, quote: "a phrase that does not appear anywhere" }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const result = await runSkill(
+      "call-summary",
+      { meeting_path: discoveryNote },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+    );
+
+    expect(result.citationsValid).toBe(false);
+  });
+
+  it("throws when the impl output never satisfies the schema", async () => {
+    vi.spyOn(llm, "complete").mockResolvedValue('{"summary":"x"}');
+    await expect(
+      runSkill(
+        "call-summary",
+        { meeting_path: discoveryNote },
+        { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      ),
+    ).rejects.toThrow(/no valid output after \d+ attempts/i);
   });
 });
