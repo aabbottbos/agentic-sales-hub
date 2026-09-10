@@ -1,7 +1,8 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-09** (spec 002 cold-reviewed + approved, PR #11 ready to merge).
+Last updated: **2026-09-10** (plan 002 merged PR #12; Build stage Tasks 1–11 done
+on `feat/002-call-summary-generation-path`; **Task 12 blocked on API credits**).
 
 ## Where we are
 
@@ -155,29 +156,77 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
   < 0.85 or `counterparty_document`/`unknown` → `inbound/` quarantine; only
   `meeting_note` ≥ 0.85 → `meetings/`; `org_material` never auto-writes canonical.
 
-## Intent 002 — call-summary generation path — SPEC APPROVED, PR #11 ready to merge
+## Intent 002 — call-summary generation path — BUILD IN PROGRESS (Tasks 1–11 of 15)
 
-Carved out of the amendment (proceeds in parallel with the WI chain).
+Carved out of the amendment. Intent + spec + plan all **merged to `main`**
+(PR #10 `a78e2d0`, PR #11 `85a942f`, PR #12 `88ed83a`). Plan:
+`docs/plans/002-call-summary-generation-path.md` — 15 TDD tasks.
 
-- **Intent:** `docs/intent/002-call-summary-generation-path.md` — **merged** (PR #10, `a78e2d0`).
-- **Spec:** `docs/specs/002-call-summary-generation-path.md` — **cold-reviewed and
-  approved** (PR #11 comment, `c7c8540`). CI green. **Merge intent + spec together**
-  (one design gate), then plan mode → `docs/plans/002-…`.
-- **Cold-review outcome:** one edit — **OQ5 resolved plan-avoids-`SCHEMA_TYPES`**:
-  the `runSkill` generation branch validates against the raw `summary-output.json`
-  JSON Schema file directly (compiled in `packages/skills`), NOT via
-  `context-core`'s `SCHEMA_TYPES` tuple or a new loader method. Keeps the intent's
-  "not touched: `packages/context-core`" literally true. `finding` /
-  `retrieval-result` still go through the registry; `summary-output` deliberately
-  does not — the plan owns where the compiled validator lives. All other judgment
-  calls (1–9) accepted as written.
-- **Waved into the plan (no spec edit):** OQ7 (offsets already fixed by
-  `resolve-citation.ts` — whole-file LF-normalized, frontmatter included);
-  generation-branch throw-vs-flag; registry access from `run-suite.ts`.
-- **Issue #7** stays open as the Phase 1 umbrella; commented with the spec link.
-- **Gotcha for next session:** the intent/spec branches are ephemeral and get
-  deleted on merge. Start each stage from a fresh branch off `main`; don't commit
-  to `main` directly (it's protected, the commit bounces).
+**Branch:** `feat/002-call-summary-generation-path` (off `main`). Not pushed / no PR yet.
+
+### Done (Tasks 1–11), each its own commit
+
+- **T1** `impl/llm.ts` — the single `@anthropic-ai/sdk` seam (`complete()`). `~0.124.0`.
+- **T2** `context/schema/summary-output.json` — output-contract schema. Auto-discovered
+  by `loadSchemas`; **no `context-core` change** (OQ5).
+- **T3** `impl/summary-schema.ts` — in-package compiled validator (`validateSummaryOutput`).
+- **T4** `call-summary.yaml` (tier `generation`, one meetings read glob, no write) +
+  generated `.claude/skills/call-summary/SKILL.md`. `skill-def.schema.json` untouched.
+- **T5** `call-summary.prompt.ts` — system + user prompt builders.
+- **T6** `impl/call-summary.ts` — resolves scope (anchored via `documentPath`), reads
+  `file.raw`, calls the seam, validates.
+- **T7** `runSkill` `generation` branch — schema validate + `checkGenerationCitations`
+  (resolve-only). Signature/return unchanged (JC #1).
+- **T8** `evals/scorers/generation.ts` — `scoreCommitmentRecall` (token overlap, ≥ 0.90).
+- **T9** `evals/judge/` — `rubric.md`, `judge-prompt.md`, `judge-model.json`, `judge.ts`
+  (`scoreRubric`, retry-median 3). Wired `evals/judge/**` into vitest/tsconfig/eslint.
+- **T10** `evals/cases/call-summary/` — 3 golden cases (discovery/demo/negotiation) +
+  labeled commitments.
+- **T11** `runGenerationSuite()` + `call-summary` in `SuiteName`/`ALL_SUITES`/`compare.ts`.
+
+150 unit tests pass; typecheck, lint, `corpus:validate`, `check:no-real-data`,
+`skills:sync:check` all green.
+
+### Live-run fixes (commit `e91bc85`) — claude-sonnet-5 quirks the plan missed
+
+1. **`temperature` is deprecated** on `claude-sonnet-5` (400). Seam only sends it
+   when set; `judge-model.json` dropped it.
+2. **Extended thinking is on by default** → model burned the whole token budget on
+   a thinking block, returned no text. Seam passes `thinking: { type: "disabled" }`.
+3. **Model can't produce char offsets** (OQ7 realized — cited spans past EOF).
+   **Citation shape changed to `{path, quote, span}`**: model returns a verbatim
+   `quote`, the impl locates it in `file.raw` and computes `span`. Unlocatable
+   quote → out-of-range span → fails the citation gate (no crash). `quote` is
+   required in `summary-output.json` + the `SummaryOutput` type.
+   - This is a schema change beyond the plan/spec's `{path, span}` draft. Flag at
+     review — arguably wants a one-line spec note. Rationale: LLMs cannot count.
+4. `MAX_TOKENS` 2048 → 6144; judge `max_tokens` 256 → 512; `parseScores` tries
+   every `{...}` (last first).
+
+### NOT DONE — blocked on `ANTHROPIC_API_KEY` credits
+
+The key used for calibration **ran out of credits** mid-Task-12
+(`invalid_request_error: credit balance is too low`).
+
+- **T11 Step 7** — one clean live smoke pass.
+- **T12 — rubric calibration.** Post-fix live results: `citation_validity = 1.00`,
+  `commitment_recall ~1.0` on all 3 cases. **`rubric_aggregate ~3.7–3.9`, below the
+  4.0 gate** — `demo` scores 3.5 (grounding 3, structure 3), `discovery` swings
+  3.5–4.25. Needs: skill-prompt tuning (prefer `close_date` over `next_meeting`
+  for go-live dates; tighter citation spans; treat a doc-delivery ask as a
+  commitment) and/or a `demo`-specific anchor softening, then **5 stable runs** to
+  set the tolerance band. Write `evals/judge/README.md`. May add ≤ 2 `acme-` notes.
+  The 4.0 gate is fixed.
+- **T13** — `ANTHROPIC_API_KEY` in `evals.yml` + `gh secret set ANTHROPIC_API_KEY`
+  (manual). Fail-closed already verified: no key → seam throws → suite exits non-zero.
+- **T14** — `CLAUDE.md` gates line, `HANDOFF.md`, committed `evals/results/` entry.
+- **T15** — full verification + open PR.
+
+**To resume:** put a funded key in `.anthropic-key` (gitignored;
+`export ANTHROPIC_API_KEY=...` one-liner) and `source` it before each `pnpm eval`
+that hits `--suite call-summary` or `all`. Then continue at T12.
+
+### Scope (locked in the intent, detailed in the spec)
 
 ### Scope (locked in the intent, detailed in the spec)
 
