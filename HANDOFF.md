@@ -203,28 +203,47 @@ Carved out of the amendment. Intent + spec + plan all **merged to `main`**
 4. `MAX_TOKENS` 2048 → 6144; judge `max_tokens` 256 → 512; `parseScores` tries
    every `{...}` (last first).
 
-### NOT DONE — blocked on `ANTHROPIC_API_KEY` credits
+### T12 CALIBRATION RUN — surfaced a gate-design problem, needs a human decision
 
-The key used for calibration **ran out of credits** mid-Task-12
-(`invalid_request_error: credit balance is too low`).
+Ran ~8 full live suites against `claude-sonnet-5` (skill) + `claude-sonnet-5`
+(judge). Full write-up: **`evals/judge/README.md`**. Summary:
 
-- **T11 Step 7** — one clean live smoke pass.
-- **T12 — rubric calibration.** Post-fix live results: `citation_validity = 1.00`,
-  `commitment_recall ~1.0` on all 3 cases. **`rubric_aggregate ~3.7–3.9`, below the
-  4.0 gate** — `demo` scores 3.5 (grounding 3, structure 3), `discovery` swings
-  3.5–4.25. Needs: skill-prompt tuning (prefer `close_date` over `next_meeting`
-  for go-live dates; tighter citation spans; treat a doc-delivery ask as a
-  commitment) and/or a `demo`-specific anchor softening, then **5 stable runs** to
-  set the tolerance band. Write `evals/judge/README.md`. May add ≤ 2 `acme-` notes.
-  The 4.0 gate is fixed.
+| Metric | Observed | Gate | Assessment |
+|---|---|---|---|
+| `citation_validity` | **1.00 every run** | = 1.00 | stable |
+| `commitment_recall` | 0.75–1.0, usually ≥ 0.90 | ≥ 0.90 | borderline; occasional 1-commitment miss |
+| `rubric_aggregate` | **2.75–4.25**, ~1–1.5 pt swing on *identical input* | ≥ 4.0 | **too noisy for a hard critical-path gate as built** |
+
+The generated summaries are good on manual inspection (accurate, fully cited,
+correct `owner`/`field`). The variance is in the **judge** — one 1–5 integer
+score per dimension, 3-attempt median still swings ±2 on a dimension. A
+prompt-tightening pass made `discovery` *worse* (2.75) and was reverted; the
+issue is judge stability, not summary quality.
+
+**Decision needed (spec-amendment territory — OQ2 says "skip-with-warning is not
+a gate"):**
+1. Judge `attempts` 3 → 7 + calibrate the threshold down to the stabilized
+   band's p10 (~3.6–3.8); or
+2. Split: `citation_validity` + `commitment_recall` stay hard blocking gates;
+   `rubric_aggregate` becomes advisory (computed, regression-tracked, not
+   build-blocking); or
+3. Stronger / ensemble judge model.
+
+**User chose: stop and decide.** `pnpm eval --suite call-summary` currently FAILS
+on the rubric gate. Deterministic gates pass. Nothing that contradicts the
+cold-reviewed spec (the fixed 4.0 gate) lands without explicit sign-off.
+
+### Still NOT DONE
+
+- **T11 Step 7** — a clean live smoke pass (blocked by the rubric gate failing).
+- **T12** — finish calibration once the gate design is settled.
 - **T13** — `ANTHROPIC_API_KEY` in `evals.yml` + `gh secret set ANTHROPIC_API_KEY`
-  (manual). Fail-closed already verified: no key → seam throws → suite exits non-zero.
+  (manual). Fail-closed verified: no key → seam throws → suite exits non-zero.
 - **T14** — `CLAUDE.md` gates line, `HANDOFF.md`, committed `evals/results/` entry.
 - **T15** — full verification + open PR.
 
-**To resume:** put a funded key in `.anthropic-key` (gitignored;
-`export ANTHROPIC_API_KEY=...` one-liner) and `source` it before each `pnpm eval`
-that hits `--suite call-summary` or `all`. Then continue at T12.
+**To resume live runs:** funded key is in `.anthropic-key` (gitignored). `source
+.anthropic-key` before any `pnpm eval` hitting `--suite call-summary` or `all`.
 
 ### Scope (locked in the intent, detailed in the spec)
 
