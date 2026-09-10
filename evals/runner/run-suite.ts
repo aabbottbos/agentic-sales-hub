@@ -3,25 +3,28 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   createLoader,
+  normalizeNewlines,
   type ContextLoader,
   type Finding,
   type RetrievalHit,
 } from "@agentic-sales-hub/context-core";
-import { runSkill } from "@agentic-sales-hub/skills";
+import { runSkill, type SummaryOutput } from "@agentic-sales-hub/skills";
 import {
   scoreRetrieval,
   scoreReview,
   scoreFindingCitations,
   scoreRetrievalCitations,
+  scoreCommitmentRecall,
   type LabeledSpan,
 } from "../scorers/index.js";
+import { scoreRubric } from "../judge/judge.js";
 import { runInjectionHarness } from "./injection-harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(here, "../..");
 
-export type SuiteName = "sow-review" | "find-evidence";
-export const ALL_SUITES: SuiteName[] = ["sow-review", "find-evidence"];
+export type SuiteName = "sow-review" | "find-evidence" | "call-summary";
+export const ALL_SUITES: SuiteName[] = ["sow-review", "find-evidence", "call-summary"];
 
 interface SowReviewCase {
   id: string;
@@ -39,6 +42,14 @@ interface FindEvidenceCase {
   input: { situation: string; k?: number };
   scope_params: { account_slug?: string; opp_id?: string };
   relevant_spans: LabeledSpan[];
+}
+
+interface CallSummaryCase {
+  id: string;
+  skill: "call-summary";
+  input: { meeting_path: string };
+  scope_params: { account_slug?: string; opp_id?: string };
+  expected_commitments_ref: string;
 }
 
 export interface CaseResult {
@@ -76,7 +87,9 @@ function toScopeParams(sp: { account_slug?: string; opp_id?: string }): {
 }
 
 export async function runSuite(suite: SuiteName): Promise<SuiteResult> {
-  return suite === "sow-review" ? runReviewSuite() : runRetrievalSuite();
+  if (suite === "sow-review") return runReviewSuite();
+  if (suite === "find-evidence") return runRetrievalSuite();
+  return runGenerationSuite();
 }
 
 async function runReviewSuite(): Promise<SuiteResult> {
@@ -174,6 +187,69 @@ async function runRetrievalSuite(): Promise<SuiteResult> {
   }
 
   return aggregateSuite("find-evidence", cases);
+}
+
+async function runGenerationSuite(): Promise<SuiteResult> {
+  const dir = join(CASES_DIR, "call-summary");
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".case.json")).sort();
+  const cases: CaseResult[] = [];
+
+  for (const file of files) {
+    const c = JSON.parse(await readFile(join(dir, file), "utf8")) as CallSummaryCase;
+    const labeled = JSON.parse(await readFile(join(dir, c.expected_commitments_ref), "utf8")) as {
+      text: string;
+    }[];
+
+    const loader = await makeLoader();
+    const result = await runSkill(
+      "call-summary",
+      { meeting_path: c.input.meeting_path },
+      { loader, scopeParams: toScopeParams(c.scope_params) },
+    );
+    const output = result.output as SummaryOutput;
+
+    const recall = scoreCommitmentRecall(
+      { commitments: output.commitments, next_steps: output.next_steps },
+      labeled,
+    );
+
+    // Citation validity: resolve-only over the flattened citation set. runSkill's
+    // generation branch already gated this (result.citationsValid); recompute here
+    // for per-citation failure detail in the report.
+    const flatCitations = [
+      ...output.citations,
+      ...output.commitments.map((x) => x.citation),
+      ...output.next_steps.map((x) => x.citation),
+      ...output.context_deltas.map((x) => x.citation),
+    ].map((cit) => ({ path: cit.path, span: cit.span, relevance: 1, why: "" }));
+    const citations = await scoreRetrievalCitations(loader, flatCitations);
+
+    const noteText = normalizeNewlines(
+      await readFile(join(REPO_ROOT, c.input.meeting_path), "utf8"),
+    );
+    const rubric = await scoreRubric(output, noteText);
+
+    const metrics = {
+      rubric_aggregate: round(rubric.aggregate),
+      commitment_recall: round(recall.recall),
+      citation_validity: round(citations.validity),
+    };
+    const gates: Record<string, "PASS" | "FAIL"> = {
+      rubric_aggregate: rubric.aggregate >= 4.0 ? "PASS" : "FAIL",
+      commitment_recall: recall.recall >= 0.9 ? "PASS" : "FAIL",
+      citation_validity: citations.validity >= 1 ? "PASS" : "FAIL",
+    };
+    const notes: string[] = [
+      `rubric dims: g=${rubric.grounding} c=${rubric.completeness} t=${rubric.tone} s=${rubric.structure} (${rubric.attempts.length} attempts)`,
+    ];
+    if (recall.misses.length) notes.push(`missed commitments: ${recall.misses.join("; ")}`);
+    if (citations.failures.length)
+      notes.push(`citation failures: ${citations.failures.join("; ")}`);
+
+    cases.push({ id: c.id, metrics, gates, injectionBlocked: null, notes });
+  }
+
+  return aggregateSuite("call-summary", cases);
 }
 
 function aggregateSuite(suite: SuiteName, cases: CaseResult[]): SuiteResult {

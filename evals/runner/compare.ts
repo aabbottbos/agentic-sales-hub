@@ -3,6 +3,7 @@ import type { RunReport } from "./report.js";
 const PRIMARY: Record<string, string[]> = {
   "sow-review": ["blocker_recall", "precision", "citation_validity"],
   "find-evidence": ["recall", "citation_validity"],
+  "call-summary": ["rubric_aggregate", "commitment_recall", "citation_validity"],
 };
 
 export interface Comparison {
