@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { complete, type CompleteArgs } from "./llm.js";
 import { validateSummaryOutput, type SummaryOutput } from "./summary-schema.js";
 import { buildSystemPrompt, buildUserPrompt } from "./call-summary.prompt.js";
+import { callSummaryImpl } from "./call-summary.js";
+import * as llm from "./llm.js";
+import { loadSkill } from "../registry.js";
 
 describe("llm seam", () => {
   it("exports complete() with the documented signature", () => {
@@ -84,5 +91,121 @@ describe("call-summary prompts", () => {
     const start = u.indexOf("<<<BEGIN MEETING NOTE>>>\n") + "<<<BEGIN MEETING NOTE>>>\n".length;
     const end = u.indexOf("\n<<<END MEETING NOTE>>>");
     expect(u.slice(start, end)).toBe(note);
+  });
+});
+
+describe("call-summary impl (stubbed model)", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = join(here, "../../../..");
+  const OPP = "006Ax0000GkLmNpQAA";
+  let loader: ContextLoader;
+
+  beforeAll(async () => {
+    loader = await createLoader({
+      repoRoot,
+      taintLedgerPath: join(repoRoot, ".claude/.taint-ledger.test.jsonl"),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function spanFor(raw: string, phrase: string): [number, number] {
+    const i = raw.replace(/\r\n/g, "\n").indexOf(phrase);
+    return [i, i + phrase.length];
+  }
+
+  it("returns a schema-valid output and only reads the one note", async () => {
+    const raw = await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8");
+    const span = spanFor(raw, "Midwest Freight");
+    const stub = JSON.stringify({
+      summary: "Discovery call with Acme Logistics about a single exception queue.",
+      commitments: [
+        {
+          text: "Send Midwest Freight case study",
+          owner: "us",
+          citation: { path: DISCOVERY_NOTE, span },
+        },
+      ],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, span }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+
+    expect(res.contextRead).toEqual([DISCOVERY_NOTE]);
+    expect(res.scopeResolved).toContain(DISCOVERY_NOTE);
+    expect((res.output as SummaryOutput).summary.length).toBeGreaterThan(0);
+  });
+
+  it("passes the whole LF-normalized file as the note text", async () => {
+    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [],
+      unsourced_claims: [],
+    });
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+
+    const userPrompt = spy.mock.calls[0][0].user;
+    const start =
+      userPrompt.indexOf("<<<BEGIN MEETING NOTE>>>\n") + "<<<BEGIN MEETING NOTE>>>\n".length;
+    const end = userPrompt.indexOf("\n<<<END MEETING NOTE>>>");
+    expect(userPrompt.slice(start, end)).toBe(raw);
+  });
+
+  it("throws a clear error when the model returns non-JSON", async () => {
+    vi.spyOn(llm, "complete").mockResolvedValue("here is your summary: ...");
+    const def = await loadSkill("call-summary");
+    await expect(
+      callSummaryImpl.run(
+        { meeting_path: DISCOVERY_NOTE },
+        { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        def,
+      ),
+    ).rejects.toThrow(/did not return valid JSON/i);
+  });
+
+  it("throws when the model returns JSON that fails the schema", async () => {
+    vi.spyOn(llm, "complete").mockResolvedValue('{"summary": "x"}');
+    const def = await loadSkill("call-summary");
+    await expect(
+      callSummaryImpl.run(
+        { meeting_path: DISCOVERY_NOTE },
+        { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        def,
+      ),
+    ).rejects.toThrow(/failed schema/i);
+  });
+
+  it("rejects a meeting_path outside the resolved scope", async () => {
+    vi.spyOn(llm, "complete").mockResolvedValue("{}");
+    const def = await loadSkill("call-summary");
+    await expect(
+      callSummaryImpl.run(
+        { meeting_path: "context/org/company.md" },
+        { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        def,
+      ),
+    ).rejects.toThrow();
   });
 });
