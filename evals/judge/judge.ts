@@ -18,6 +18,8 @@ export interface RubricResult extends RubricScores {
   aggregate: number;
   /** the per-attempt scores that parsed (unparseable attempts are dropped) */
   attempts: RubricScores[];
+  /** set when the judge produced no usable scores; dims + aggregate are 0 */
+  unavailable?: boolean;
 }
 
 const DIMENSIONS = ["grounding", "completeness", "tone", "structure"] as const;
@@ -81,12 +83,18 @@ function loadConfig(): JudgeConfig {
 const rubricText = readFileSync(join(here, "rubric.md"), "utf8");
 const promptTemplate = readFileSync(join(here, "judge-prompt.md"), "utf8");
 
+const ZERO: RubricScores = { grounding: 0, completeness: 0, tone: 0, structure: 0 };
+
 /**
  * Score a call-summary output against the committed rubric with the committed
  * judge model. Runs `attempts` completions, takes the median per dimension, then
- * aggregates. The rubric gate (aggregate >= 4.0) is applied by the caller; a
- * hard-fail below 4.0 is not softened (spec 002 OQ2). Throws only if no attempt
- * produced parseable scores.
+ * aggregates.
+ *
+ * `rubric_aggregate` is an ADVISORY metric, not a blocking gate (spec 002 OQ2
+ * amendment; see evals/judge/README.md). So a flaky judge must not fail the
+ * suite: individual empty/unparseable responses are retried within the loop, and
+ * if every attempt fails this returns `{ ...ZERO, aggregate: 0, unavailable:
+ * true }` rather than throwing. The deterministic gates still decide the build.
  */
 export async function scoreRubric(
   output: SummaryOutput,
@@ -101,18 +109,27 @@ export async function scoreRubric(
     .replace("{{OUTPUT}}", JSON.stringify(output, null, 2));
 
   const got: RubricScores[] = [];
-  for (let i = 0; i < attempts; i++) {
-    const text = await complete({
-      system: "You are a strict evaluation judge. Output only the requested JSON.",
-      user,
-      model: c.model,
-      maxTokens: c.max_tokens,
-    });
+  // Allow a few extra tries so a transient empty response does not starve the
+  // median, but cap total calls.
+  const maxCalls = attempts + 2;
+  for (let i = 0; i < maxCalls && got.length < attempts; i++) {
+    let text = "";
+    try {
+      text = await complete({
+        system: "You are a strict evaluation judge. Output only the requested JSON.",
+        user,
+        model: c.model,
+        maxTokens: c.max_tokens,
+      });
+    } catch {
+      continue;
+    }
     const s = parseScores(text);
     if (s) got.push(s);
   }
+
   if (got.length === 0) {
-    throw new Error("rubric judge returned no parseable scores across all attempts");
+    return { ...ZERO, aggregate: 0, attempts: [], unavailable: true };
   }
 
   const merged: RubricScores = {

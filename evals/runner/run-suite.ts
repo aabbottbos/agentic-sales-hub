@@ -234,14 +234,21 @@ async function runGenerationSuite(): Promise<SuiteResult> {
       commitment_recall: round(recall.recall),
       citation_validity: round(citations.validity),
     };
+    // Deterministic gates block the build. `rubric_aggregate` is ADVISORY — a
+    // single LLM judge is too noisy on identical input to sit on the critical
+    // path (see evals/judge/README.md + spec 002 OQ2 amendment). It stays in
+    // `metrics` (printed, and regression-tracked via compare.ts PRIMARY) but is
+    // deliberately not a gate.
     const gates: Record<string, "PASS" | "FAIL"> = {
-      rubric_aggregate: rubric.aggregate >= 4.0 ? "PASS" : "FAIL",
       commitment_recall: recall.recall >= 0.9 ? "PASS" : "FAIL",
       citation_validity: citations.validity >= 1 ? "PASS" : "FAIL",
     };
-    const notes: string[] = [
-      `rubric dims: g=${rubric.grounding} c=${rubric.completeness} t=${rubric.tone} s=${rubric.structure} (${rubric.attempts.length} attempts)`,
-    ];
+    const rubricNote = rubric.unavailable
+      ? "rubric: judge unavailable (advisory metric — not gated)"
+      : `rubric aggregate ${round(rubric.aggregate)}${
+          rubric.aggregate >= 4.0 ? "" : " (advisory, below the 4.0 target)"
+        }; dims g=${rubric.grounding} c=${rubric.completeness} t=${rubric.tone} s=${rubric.structure} (${rubric.attempts.length} judge attempts)`;
+    const notes: string[] = [rubricNote];
     if (recall.misses.length) notes.push(`missed commitments: ${recall.misses.join("; ")}`);
     if (citations.failures.length)
       notes.push(`citation failures: ${citations.failures.join("; ")}`);

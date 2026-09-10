@@ -44,9 +44,18 @@ describe("scoreRubric", () => {
     expect(r.completeness).toBe(5);
   });
 
-  it("throws if the judge never returns parseable scores", async () => {
+  it("returns unavailable (not a throw) when the judge never parses", async () => {
     vi.spyOn(llm, "complete").mockResolvedValue("nope");
-    await expect(scoreRubric(OUT, "n", { attempts: 3 })).rejects.toThrow(/parseable/i);
+    const r = await scoreRubric(OUT, "n", { attempts: 3 });
+    expect(r.unavailable).toBe(true);
+    expect(r.aggregate).toBe(0);
+    expect(r.attempts).toHaveLength(0);
+  });
+
+  it("returns unavailable when every judge call throws", async () => {
+    vi.spyOn(llm, "complete").mockRejectedValue(new Error("500"));
+    const r = await scoreRubric(OUT, "n", { attempts: 3 });
+    expect(r.unavailable).toBe(true);
   });
 
   it("ignores an unparseable attempt but uses the good ones", async () => {

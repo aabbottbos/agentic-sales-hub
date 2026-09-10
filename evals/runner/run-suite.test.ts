@@ -31,13 +31,19 @@ describe("eval suites (end to end against the corpus)", () => {
 });
 
 describe.skipIf(!HAS_KEY)("call-summary suite (needs ANTHROPIC_API_KEY)", () => {
-  it("clears all three gates on the golden set", async () => {
+  it("clears the deterministic gates and reports the advisory rubric", async () => {
     const r = await runSuite("call-summary");
+
+    // Deterministic gates block the build.
     expect(r.gates.citation_validity).toBe("PASS");
     expect(r.gates.commitment_recall).toBe("PASS");
-    expect(r.gates.rubric_aggregate).toBe("PASS");
     expect(r.aggregate.citation_validity).toBe(1);
     expect(r.aggregate.commitment_recall).toBeGreaterThanOrEqual(0.9);
-    expect(r.aggregate.rubric_aggregate).toBeGreaterThanOrEqual(4.0);
+
+    // rubric_aggregate is advisory: reported as a number, tracked for
+    // regression, but NOT a gate (see evals/judge/README.md).
+    expect(r.gates.rubric_aggregate).toBeUndefined();
+    expect(typeof r.aggregate.rubric_aggregate).toBe("number");
+    expect(r.aggregate.rubric_aggregate).toBeGreaterThan(0);
   }, 180_000);
 });

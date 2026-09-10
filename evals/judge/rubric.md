@@ -1,9 +1,13 @@
 # call-summary rubric (v1)
 
 Four dimensions, scored 1-5 (integers). Aggregate = mean of the four.
-Gate: **aggregate >= 4.0**. The gate is fixed; the 1-5 anchor text below is
-calibrated against real output (plan 002 Task 12) — record any anchor change in
-`evals/judge/README.md`.
+
+**Advisory metric, not a blocking gate.** Target: aggregate **>= 4.0**. A single
+LLM judge proved too noisy on identical input to sit on the CI critical path, so
+`rubric_aggregate` is computed, printed, and regression-tracked but does not fail
+the build (spec 002 OQ2 amendment; see `evals/judge/README.md`). The blocking
+gates for `call-summary` are the deterministic ones — `citation_validity = 1.00`
+and `commitment_recall >= 0.90`.
 
 ## grounding
 

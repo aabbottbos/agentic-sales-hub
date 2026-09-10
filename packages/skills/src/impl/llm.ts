@@ -43,7 +43,7 @@ function getClient(): Anthropic {
  * (`stop_reason: max_tokens`, content `[{type:"thinking"}]`). These tasks want
  * the answer, not the reasoning.
  */
-export async function complete(args: CompleteArgs): Promise<string> {
+async function once(args: CompleteArgs): Promise<string> {
   const res = await getClient().messages.create({
     model: args.model,
     max_tokens: args.maxTokens,
@@ -56,6 +56,33 @@ export async function complete(args: CompleteArgs): Promise<string> {
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
+}
+
+/** True for errors worth retrying — rate limits, timeouts, 5xx. Not 4xx. */
+function isTransient(err: unknown): boolean {
+  const status = (err as { status?: number }).status;
+  if (typeof status === "number") return status === 429 || status >= 500;
+  const name = (err as { name?: string }).name ?? "";
+  return /Connection|Timeout/i.test(name);
+}
+
+/**
+ * One non-streaming completion. Returns the concatenated text of the response.
+ * Retries up to `retries` times on a transient error (429 / 5xx / connection),
+ * with a short backoff. A 4xx (bad request, auth, credits) fails immediately.
+ */
+export async function complete(args: CompleteArgs, retries = 2): Promise<string> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await once(args);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === retries || !isTransient(err)) throw err;
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 /** Test seam: swap the client (or pass null to reset). */

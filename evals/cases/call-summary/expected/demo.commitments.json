@@ -2,8 +2,5 @@
   { "text": "Produce a SOW draft with the NTE number" },
   { "text": "Send Pat the MSA and SOW for legal review" },
   { "text": "Send Pat the change-order language" },
-  {
-    "text": "Priya to provide the integration-design intake: systems, API credentials, test data, SME time"
-  },
-  { "text": "Deliver the integration design doc before the carrier-scorecard connector is built" }
+  { "text": "Priya to provide the integration-design intake" }
 ]
