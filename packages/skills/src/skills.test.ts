@@ -24,15 +24,25 @@ beforeAll(async () => {
 });
 
 describe("skill registry", () => {
-  it("loads both product skill definitions", async () => {
+  it("loads all three product skill definitions", async () => {
     const skills = await listSkills();
-    expect(skills.map((s) => s.id).sort()).toEqual(["find-evidence", "sow-review"]);
+    expect(skills.map((s) => s.id).sort()).toEqual(["call-summary", "find-evidence", "sow-review"]);
   });
 
   it("sow-review has no write grant", async () => {
     const def = await loadSkill("sow-review");
     expect(def.tier).toBe("review");
     expect(def.context_grants.write).toBeUndefined();
+  });
+
+  it("call-summary is a generation skill, meetings read grant only, no write grant", async () => {
+    const def = await loadSkill("call-summary");
+    expect(def.tier).toBe("generation");
+    expect(def.context_grants.read).toEqual(["context/accounts/*/opportunities/*/meetings/**"]);
+    expect(def.context_grants.write).toBeUndefined();
+    expect(def.tools).toEqual(["context.read"]);
+    expect(def.output.schema).toBe("context/schema/summary-output.json");
+    expect(def.output.requires_citations).toBe(true);
   });
 
   it("throws for an unknown skill id", async () => {

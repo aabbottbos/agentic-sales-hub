@@ -1,0 +1,22 @@
+id: call-summary
+tier: generation
+version: 1
+description: >-
+  Summarize one sales meeting note into a structured call summary — a prose
+  recap plus extracted commitments, next steps, and opportunity context deltas,
+  each carrying a resolvable citation into the note. Claims with no source are
+  marked [unsourced], never asserted. Returns a structured object; a separate
+  step (WI-2) persists it.
+context_grants:
+  read:
+    - context/accounts/*/opportunities/*/meetings/**
+inputs:
+  meeting_path:
+    type: string
+    required: true
+output:
+  schema: context/schema/summary-output.json
+  requires_citations: true
+eval_suite: evals/cases/call-summary/
+tools:
+  - context.read
