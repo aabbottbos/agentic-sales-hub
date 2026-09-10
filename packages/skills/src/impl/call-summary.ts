@@ -155,74 +155,95 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
     const noteText = file.raw;
     trace.push({ step: "readNote", detail: `${noteText.length} chars` });
 
-    const responseText = await complete({
-      system: buildSystemPrompt(),
-      user: buildUserPrompt(meetingPath, noteText),
-      model: MODEL,
-      maxTokens: MAX_TOKENS,
-    });
-    trace.push({ step: "model", detail: `${responseText.length} chars returned` });
-
-    const jsonText = extractJsonObject(responseText);
-    if (!jsonText) {
-      throw new Error("call-summary: model did not return valid JSON");
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch {
-      throw new Error("call-summary: model did not return valid JSON");
-    }
-
     // Turn each model citation {path, quote} into {path, quote, span} by locating
-    // the quote in the note. A quote that cannot be located verbatim is a
-    // fabricated citation: keep its shape but give it an out-of-range span so it
-    // fails the citation-validity gate (rather than crashing the run). That is
-    // the honest outcome — the claim was not actually supported.
+    // the quote in the note. A quote that cannot be located verbatim keeps its
+    // shape but gets an out-of-range span so it fails the citation-validity gate
+    // — the honest outcome, the claim was not actually supported.
     const badSpan: [number, number] = [noteText.length, noteText.length + 1];
-    let unlocatable = 0;
-    const fixCitation = (
-      raw: RawCitation,
-    ): { path: string; quote: string; span: [number, number] } => {
-      const resolved = resolveCitationSpan(noteText, raw);
-      if (resolved) return resolved;
-      unlocatable++;
-      return {
-        path: typeof raw.path === "string" ? raw.path : meetingPath,
-        quote: typeof raw.quote === "string" && raw.quote.length ? raw.quote : "(no quote)",
-        span: badSpan,
+    const fixCitations = (parsed: unknown): number => {
+      let unlocatable = 0;
+      const fix = (raw: RawCitation): { path: string; quote: string; span: [number, number] } => {
+        const resolved = resolveCitationSpan(noteText, raw);
+        if (resolved) return resolved;
+        unlocatable++;
+        return {
+          path: typeof raw.path === "string" ? raw.path : meetingPath,
+          quote: typeof raw.quote === "string" && raw.quote.length ? raw.quote : "(no quote)",
+          span: badSpan,
+        };
       };
-    };
-
-    if (parsed && typeof parsed === "object") {
-      const p = parsed as Record<string, unknown>;
-      for (const key of ["commitments", "next_steps", "context_deltas"] as const) {
-        if (Array.isArray(p[key])) {
-          for (const item of p[key] as { citation?: unknown }[]) {
-            item.citation = fixCitation((item.citation ?? {}) as RawCitation);
+      if (parsed && typeof parsed === "object") {
+        const p = parsed as Record<string, unknown>;
+        for (const key of ["commitments", "next_steps", "context_deltas"] as const) {
+          if (Array.isArray(p[key])) {
+            for (const item of p[key] as { citation?: unknown }[]) {
+              item.citation = fix((item.citation ?? {}) as RawCitation);
+            }
           }
         }
+        if (Array.isArray(p.citations)) {
+          p.citations = (p.citations as RawCitation[]).map(fix);
+        }
       }
-      if (Array.isArray(p.citations)) {
-        p.citations = (p.citations as RawCitation[]).map(fixCitation);
-      }
-    }
-    if (unlocatable) {
-      trace.push({
-        step: "citations",
-        detail: `${unlocatable} model quote(s) not found verbatim in note`,
+      return unlocatable;
+    };
+
+    // The model occasionally returns a truncated response, non-JSON, or JSON that
+    // misses the contract (a stray key on a context_delta, etc.). None of these
+    // are API errors, so the seam's own retry does not catch them — retry the
+    // whole generate → parse → validate a few times before giving up. A
+    // persistent failure is a real problem and throws.
+    const MAX_GEN_ATTEMPTS = 3;
+    let output: SummaryOutput | null = null;
+    let lastError = "unknown";
+    for (let attempt = 1; attempt <= MAX_GEN_ATTEMPTS; attempt++) {
+      const responseText = await complete({
+        system: buildSystemPrompt(),
+        user: buildUserPrompt(meetingPath, noteText),
+        model: MODEL,
+        maxTokens: MAX_TOKENS,
       });
+
+      const jsonText = extractJsonObject(responseText);
+      let parsed: unknown;
+      if (jsonText) {
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch {
+          parsed = undefined;
+        }
+      }
+      if (parsed === undefined) {
+        lastError = `unparseable output (${responseText.length} chars)`;
+      } else {
+        const unlocatable = fixCitations(parsed);
+        const check = validateSummaryOutput(parsed);
+        if (check.valid) {
+          output = parsed as SummaryOutput;
+          trace.push({
+            step: "model",
+            detail: `parsed + validated on attempt ${attempt}${
+              unlocatable ? `; ${unlocatable} quote(s) not found in note` : ""
+            }`,
+          });
+          break;
+        }
+        lastError = `schema — ${check.errors.slice(0, 3).join("; ")}`;
+      }
+
+      if (attempt < MAX_GEN_ATTEMPTS) {
+        trace.push({ step: "model", detail: `attempt ${attempt} failed (${lastError}); retrying` });
+      }
     }
 
-    const check = validateSummaryOutput(parsed);
-    if (!check.valid) {
+    if (!output) {
       throw new Error(
-        `call-summary: output failed schema — ${check.errors.slice(0, 5).join("; ")}`,
+        `call-summary: no valid output after ${MAX_GEN_ATTEMPTS} attempts (last: ${lastError})`,
       );
     }
 
     return {
-      output: parsed as SummaryOutput,
+      output,
       scopeResolved,
       contextRead: [meetingPath],
       trace,

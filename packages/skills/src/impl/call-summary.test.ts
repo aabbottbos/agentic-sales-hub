@@ -192,8 +192,8 @@ describe("call-summary impl (stubbed model)", () => {
     expect(userPrompt.slice(start, end)).toBe(raw);
   });
 
-  it("throws a clear error when the model returns non-JSON", async () => {
-    vi.spyOn(llm, "complete").mockResolvedValue("here is your summary: ...");
+  it("throws a clear error when the model never returns valid JSON", async () => {
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue("here is your summary: ...");
     const def = await loadSkill("call-summary");
     await expect(
       callSummaryImpl.run(
@@ -201,11 +201,38 @@ describe("call-summary impl (stubbed model)", () => {
         { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
         def,
       ),
-    ).rejects.toThrow(/did not return valid JSON/i);
+    ).rejects.toThrow(/no valid output after \d+ attempts/i);
+    expect(spy.mock.calls.length).toBeGreaterThan(1); // it retried
   });
 
-  it("throws when the model returns JSON that fails the schema", async () => {
-    vi.spyOn(llm, "complete").mockResolvedValue('{"summary": "x"}');
+  it("recovers when an early model response is unparseable but a later one is valid", async () => {
+    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const quote = "ONE exception queue";
+    const good = JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete")
+      .mockResolvedValueOnce("(thinking out loud, no json here)")
+      .mockResolvedValueOnce(good);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+    expect(out.summary).toContain("exception queue");
+    expect(raw.slice(...out.citations[0].span)).toBe(quote);
+  });
+
+  it("retries then throws when the model output never satisfies the schema", async () => {
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue('{"summary": "x"}');
     const def = await loadSkill("call-summary");
     await expect(
       callSummaryImpl.run(
@@ -213,7 +240,32 @@ describe("call-summary impl (stubbed model)", () => {
         { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
         def,
       ),
-    ).rejects.toThrow(/failed schema/i);
+    ).rejects.toThrow(/no valid output after \d+ attempts \(last: schema/i);
+    expect(spy.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("recovers when an early response fails the schema but a later one passes", async () => {
+    const quote = "ONE exception queue";
+    const good = JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete")
+      .mockResolvedValueOnce(
+        '{"summary":"x","context_deltas":[{"field":"risk","observation":"y","citation":{"path":"p","quote":"q"},"extra":1}]}',
+      )
+      .mockResolvedValueOnce(good);
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    expect((res.output as SummaryOutput).summary).toContain("exception queue");
   });
 
   it("rejects a meeting_path outside the resolved scope", async () => {

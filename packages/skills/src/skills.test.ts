@@ -227,7 +227,7 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
     expect(result.citationsValid).toBe(false);
   });
 
-  it("throws when the impl output does not satisfy the schema", async () => {
+  it("throws when the impl output never satisfies the schema", async () => {
     vi.spyOn(llm, "complete").mockResolvedValue('{"summary":"x"}');
     await expect(
       runSkill(
@@ -235,6 +235,6 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
         { meeting_path: discoveryNote },
         { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
       ),
-    ).rejects.toThrow(/failed schema|does not satisfy/i);
+    ).rejects.toThrow(/no valid output after \d+ attempts/i);
   });
 });
