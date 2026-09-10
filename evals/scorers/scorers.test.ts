@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scoreRetrieval, covers } from "./retrieval.js";
 import { scoreReview, matches } from "./review.js";
+import { scoreCommitmentRecall } from "./generation.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
 
 const hit = (path: string, span: [number, number]): RetrievalHit => ({
@@ -105,5 +106,42 @@ describe("review scorer", () => {
 
   it("blockerRecall is 1 when there are no blocker labels", () => {
     expect(scoreReview([], []).blockerRecall).toBe(1);
+  });
+});
+
+describe("scoreCommitmentRecall", () => {
+  const labeled = [
+    { text: "Send the Midwest Freight case study" },
+    { text: "SE to run a technical deep dive with Acme IT" },
+    { text: "Send Pat the MSA and SOW for legal review" },
+  ];
+
+  it("counts a fuzzy match as covered", () => {
+    const produced = {
+      commitments: [{ text: "AE will send Midwest Freight case study to Dana" }],
+      next_steps: [{ text: "SE technical deep dive w/ their IT team" }],
+    };
+    const r = scoreCommitmentRecall(produced, labeled);
+    expect(r.covered).toBe(2);
+    expect(r.recall).toBeCloseTo(2 / 3);
+    expect(r.misses).toEqual(["Send Pat the MSA and SOW for legal review"]);
+  });
+
+  it("recall is 1 when every label is covered", () => {
+    const produced = {
+      commitments: labeled.map((l) => ({ text: l.text })),
+      next_steps: [],
+    };
+    expect(scoreCommitmentRecall(produced, labeled).recall).toBe(1);
+  });
+
+  it("empty labels => recall 1", () => {
+    expect(scoreCommitmentRecall({ commitments: [], next_steps: [] }, []).recall).toBe(1);
+  });
+
+  it("no produced items and non-empty labels => recall 0", () => {
+    const r = scoreCommitmentRecall({ commitments: [], next_steps: [] }, labeled);
+    expect(r.recall).toBe(0);
+    expect(r.misses.length).toBe(3);
   });
 });
