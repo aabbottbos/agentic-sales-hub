@@ -250,17 +250,39 @@ Changes committed for T12 (this + the prior `e91bc85`):
 151 unit tests pass; typecheck, lint, `corpus:validate`, `check:no-real-data`,
 `skills:sync:check` all green.
 
+### T13 DONE (commit `d60246c`)
+
+`evals.yml` reads `ANTHROPIC_API_KEY` from repo secrets (safe env pattern). No
+key → seam throws → `pnpm eval` non-zero → job fails. **Fails closed.**
+
+**MANUAL STEP STILL OWED BY THE USER** (chose to do it themselves):
+```
+source .anthropic-key && gh secret set ANTHROPIC_API_KEY \
+  --repo aabbottbos/agentic-sales-hub --body "$ANTHROPIC_API_KEY"
+```
+Until then the eval CI on the PR is red — intended, not a blocker.
+
+### T14 DONE (commits `6c303a9`, `<results commit>`)
+
+- `CLAUDE.md` — current-state line + Eval gates section (2 hard gates + advisory
+  rubric). Under 150 lines.
+- `docs/specs/002-…` — **"## Build-stage amendments"** section (A1 rubric
+  advisory / revises OQ2, A2 citation `{path, quote, span}` / resolves OQ7, A3
+  label trims / within OQ4). **A reviewer must ratify A1 + A2** — flagged in the
+  PR body.
+- `evals/results/2026-09-10-6c303a9.json` — committed. `regression vs
+  2026-09-07-434b594: PASS`. `sow-review` + `find-evidence` unchanged;
+  `call-summary` both hard gates PASS on all 3 cases.
+
 ### Still NOT DONE
 
-- **T13** — `ANTHROPIC_API_KEY` env in `evals.yml` + `gh secret set
-  ANTHROPIC_API_KEY --repo aabbottbos/agentic-sales-hub` (manual). Fail-closed
-  verified: no key → seam throws → suite exits non-zero.
-- **T14** — `CLAUDE.md` gates line (2 hard gates + advisory rubric); `HANDOFF.md`;
-  committed `evals/results/` entry; **fold the OQ2 amendment + the
-  `{path, quote, span}` citation-shape note into `docs/specs/002-…`.**
-- **T15** — full verification + open PR. Flag at review: (a) OQ2 amendment (rubric
-  advisory), (b) citation shape `{path, quote, span}` vs the spec's `{path, span}`
-  draft — LLMs cannot count offsets.
+- **T15** — full verification pass (`pnpm typecheck / lint / test / build` +
+  `corpus:validate` + `check:no-real-data` + `skills:sync:check` + a live
+  `pnpm eval --suite all`), then push `feat/002-call-summary-generation-path`
+  and open the PR. PR body must flag: (a) spec amendment A1 (rubric advisory —
+  revises the cold-reviewed OQ2), (b) spec amendment A2 (citation shape), (c)
+  the manual `gh secret set` step, (d) the `{path, quote, span}` schema change
+  vs. the spec's `{path, span}` draft.
 
 **To resume live runs:** funded key is in `.anthropic-key` (gitignored). `source
 .anthropic-key` before any `pnpm eval` hitting `--suite call-summary` or `all`.
