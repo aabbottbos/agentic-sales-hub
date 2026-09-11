@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `packages/context-core` — the context loader and security boundary (schema validation, scope resolution, provenance, append-only enforcement, quarantine + taint ledger, `writeFindings`).
 - `packages/skills` — `find-evidence` (retrieval) and `sow-review` (review) as **deterministic** impls (ADR `docs/decisions/0001-phase0-deterministic-skills.md`); `call-summary` (generation) as the first **LLM-backed** impl (`@anthropic-ai/sdk` behind the `impl/llm.ts` seam; spec/plan 002). Driven by YAML definitions; `runSkill` enforces grants + output contract.
-- `context/` — the "Minimal + 1 opportunity" synthetic corpus (Meridian Grid / Acme Logistics) + `context/schema/` (17 JSON Schemas, the published spec).
+- `examples/demo-corpus/` — the "Minimal + 1 opportunity" synthetic corpus (Meridian Grid / Acme Logistics) + `context/schema/` (17 JSON Schemas, the published spec, unmoved — `context/` is a logical root marker resolved via `resolveContextRoot()`, not a fixed physical location).
 - `evals/` — scorers, labeled cases, `pnpm eval --suite <…>`, and the injection harness. All six Phase 0 success criteria pass.
 - `.claude/hooks/` — quarantine + protect-paths (PreToolUse), format-on-write (PostToolUse); `.claude/settings.json` registers them.
 - `.github/workflows/` — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`.
@@ -82,7 +82,7 @@ A PR touching `.claude/skills/**`, `packages/skills/**`, `packages/context-core/
 | `pnpm lint` | eslint + prettier --check |
 | `pnpm format` | prettier --write |
 | `pnpm eval --suite <sow-review\|find-evidence\|all>` | run the eval suite; `--write-results` (auto in CI) writes `evals/results/<date>-<sha>.json` |
-| `pnpm corpus:validate` | validate every `context/` file, inbound hashes, dir-name cross-checks |
+| `pnpm corpus:validate` | validate every context file (defaults to `examples/demo-corpus/`; `--root`/`ASH_CONTEXT_ROOT` overrides), inbound hashes, dir-name cross-checks |
 | `pnpm check:no-real-data` | synthetic-namespace + `fictional: true` guard |
 | `pnpm skills:sync` / `:check` | regenerate / drift-check `.claude/skills/<id>/SKILL.md` from the YAML definitions |
 
@@ -101,7 +101,7 @@ packages/skills           YAML skill definitions (data — one file drives the
                           + deterministic impls + runSkill
 evals/                    scorers · labeled cases · runner · injection-harness
 context/schema/           17 JSON Schemas — the published context spec
-context/                  the synthetic corpus
+examples/demo-corpus/     the synthetic corpus
 .claude/hooks/            quarantine-inbound, protect-paths, format-on-write
 --- Phase 1+ ---
 packages/mcp-agentic-sales-hub    MCP server (context.read/search, artifact.write, skill.run, trace.get)

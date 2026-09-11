@@ -4,6 +4,13 @@ This directory **is** the context spec. Every file Agentic Sales Hub reads or wr
 `context/` is a Markdown file with typed YAML frontmatter validated against one of the JSON
 Schemas here (JSON Schema draft 2020-12). Git is the store — there is no database.
 
+`context/` below is a **logical root marker**, not always a physical directory. The path→schema
+table describes the logical layout every grant glob, citation, and eval case is written
+against; it's resolved to wherever the corpus actually lives (`resolveContextRoot()` —
+`opts.root` → `ASH_CONTEXT_ROOT` → `ash.config.json`'s `contextRoot` → `./context`) at read
+time. This repo's own demo corpus physically lives at `examples/demo-corpus/`; an adopter's
+lives wherever they configure it — both resolve against these same schemas.
+
 ## The two mutability classes
 
 | Class | Where | Rule |
@@ -67,6 +74,8 @@ Everything in Phase 0 ships `1.0.0`; there is no migration tooling yet.
 pnpm corpus:validate
 ```
 
-Walks every file under `context/`, validates it against its schema, verifies the
+Walks every file under the configured context root — defaults to `examples/demo-corpus/`
+for this repo's own demo fixture; pass `--root <path>` or set `ASH_CONTEXT_ROOT` to point it
+at an adopter's real corpus instead — validates each file against its schema, verifies the
 `source_hash` of every `inbound/**` file, and cross-checks that each `crm_id` and
 `account_slug` equals its directory name. Exit non-zero on any error. Runs in CI.
