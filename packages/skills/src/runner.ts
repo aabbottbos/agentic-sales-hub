@@ -118,6 +118,12 @@ export async function runSkill(
 
   let artifactPath: string | undefined;
   if (def.tier === "generation" && def.context_grants.write?.length) {
+    if (!def.output.requires_citations) {
+      throw new Error(
+        `${id}: a generation skill with a write grant must set output.requires_citations: true — ` +
+          `writeArtifact() must never run without a citation-validity check having actually executed`,
+      );
+    }
     if (citationsValid === false) {
       throw new Error(
         `${id}: refusing to persist — citation validity check failed; ` +

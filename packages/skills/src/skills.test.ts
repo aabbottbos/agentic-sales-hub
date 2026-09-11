@@ -5,6 +5,7 @@ import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
+import * as registry from "./registry.js";
 import { runSkill, validateInput, flattenCitations } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
 import * as llm from "./impl/llm.js";
@@ -446,6 +447,42 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
           { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
         ),
       ).rejects.toThrow(/citation validity/i);
+
+      expect(writeArtifactSpy).not.toHaveBeenCalled();
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a generation skill with a write grant but requires_citations: false — throws before writeArtifact, without ever running a citation check (call-prep.yaml itself is untouched; only the loaded def is faked)", async () => {
+    const { tmpDir, loader: scratchLoader } = await scratchCorpus();
+    try {
+      const realDef = await loadSkill("call-prep");
+      expect(realDef.output.requires_citations).toBe(true); // sanity: the real file is unaffected
+      const brokenDef = {
+        ...realDef,
+        output: { ...realDef.output, requires_citations: false },
+      };
+      vi.spyOn(registry, "loadSkill").mockResolvedValue(brokenDef);
+
+      const stub = JSON.stringify({
+        goal: "x",
+        what_we_know: [],
+        talking_points: [],
+        risks: [],
+        citations: [],
+        unsourced_claims: ["everything is unsourced"],
+      });
+      vi.spyOn(llm, "complete").mockResolvedValue(stub);
+      const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
+
+      await expect(
+        runSkill(
+          "call-prep",
+          { account_slug: "acme-logistics", opp_id: OPP },
+          { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        ),
+      ).rejects.toThrow(/must set output\.requires_citations: true/i);
 
       expect(writeArtifactSpy).not.toHaveBeenCalled();
     } finally {
