@@ -1,8 +1,8 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-10** (intent 002 / `call-summary` **shipped** — PR #13
-merged to `main`, `b135b08`. Next: WI-1 tenancy seam, intent 003).
+Last updated: **2026-09-11** (WI-1 / intent 003 tenancy seam **shipped** — PR #17
+merged to `main`, `d6c6329`. Next: WI-2, intent 004 — `call-prep` + the write path).
 
 ## Where we are
 
@@ -49,7 +49,7 @@ All six intent success criteria are met.
 |---|---|---|
 | Context loader / security boundary | `packages/context-core/` | done — 92 tests. `createLoader()` is the entrypoint (`src/loader.ts`). |
 | Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12). `context/schema/README.md` is the path→schema table. |
-| Synthetic corpus | `context/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. **WI-1 will `git mv` this to `examples/demo-corpus/`.** |
+| Synthetic corpus | `examples/demo-corpus/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. Moved from `context/` by WI-1 (`git mv`, history preserved); `context/` now holds only `schema/`, `templates/`, `.gitkeep`. |
 | Skills | `packages/skills/` | done — `find-evidence` + `sow-review`, **deterministic** (ADR `docs/decisions/0001`). YAML defs in `src/definitions/`, impls in `src/impl/`, `runSkill` in `src/runner.ts`. |
 | Eval harness | `evals/` | done — scorers, cases, `runner/cli.ts` (`pnpm eval`), `runner/injection-harness.ts`. |
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
@@ -122,7 +122,8 @@ All six intent success criteria are met.
    WI-5.
 3. **HANDOFF vs. amendment numbering** — resolved: the amendment's WI chain
    (intent 003–007) is authoritative. Intent 002 (`call-summary`) shipped
-   separately (PR #13). Next up: **WI-1 / intent 003** — the tenancy seam.
+   separately (PR #13). WI-1 / intent 003 (tenancy seam) shipped PR #17.
+   Next up: **WI-2 / intent 004** — `call-prep` + the write path.
 
 ## The work chain (amendment §6–§11)
 
@@ -132,7 +133,7 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 | WI | What | Tier | Intent | State |
 |---|---|---|---|---|
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
-| **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | not started |
+| **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
 | **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | not started |
 | **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 005 | not started |
 | **WI-4** | `packages/mcp-agentic-sales-hub` + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 006 | not started |
@@ -191,8 +192,82 @@ instead of throwing; `resolveCitationSpan` has a 4-tier quote matcher;
 `evals.yml` compare step no-ops when `pnpm eval` produced no report.
 
 **`ANTHROPIC_API_KEY` is set as a repo secret** (Actions). Locally it lives in
-`.anthropic-key` (gitignored) — `source .anthropic-key` before any `pnpm eval`
-hitting `--suite call-summary` or `all`.
+`.anthropic-key` (gitignored) or `.env.local` (also gitignored, via `.env.*`) —
+before any `pnpm eval` hitting `--suite call-summary` or `all`:
+- **The key must be workspace-scoped.** A key not bound to a workspace gets
+  `400: This API key is not scoped to a workspace...` from every `call-summary`
+  request. Generate one at console.anthropic.com → Settings → API Keys.
+- **`source .anthropic-key` doesn't work inside a git-worktree-isolated
+  session** — the harness blocks `source`/`export` there (can't statically
+  verify the sourced content isn't a git command). Use
+  `pnpm exec tsx --env-file=.anthropic-key evals/runner/cli.ts --suite all --write-results`
+  instead (Node 22+'s native `--env-file`, threaded through `tsx`). Outside a
+  worktree, `source .anthropic-key && pnpm eval --suite all` still works fine.
 
-Baseline eval result: `evals/results/2026-09-10-0932036.json` (All gates pass,
-regression vs `2026-09-07-434b594` PASS).
+Baseline eval result: `evals/results/2026-09-10-0932036.json` (call-summary
+pre-WI-1). WI-1's post-move baseline: `evals/results/2026-09-11-f82c7a7.json`
+(all suites, `regression_verdict: PASS`).
+
+## WI-1 — tenancy seam — SHIPPED (PR #17, `d6c6329`)
+
+Makes the context root configurable and moves the demo corpus out of `context/`.
+Intent + spec + plan (`docs/intent/003`, `docs/specs/003`, `docs/plans/003`)
+merged first as PR #16 (Design gate, cold-reviewed); implementation followed as
+PR #17 via `superpowers:subagent-driven-development` — 9 sequenced tasks, each
+with independent spec-compliance + code-quality review.
+
+**Key outcomes:**
+- `packages/context-core/src/config.ts` — `resolveContextRoot(opts?: { root?,
+  cwd? })`, sync, precedence `opts.root` → `ASH_CONTEXT_ROOT` → `ash.config.json`
+  `contextRoot` → `./context`. `AshConfig` fully typed (`contextRoot`,
+  `org.slug`, `compile.skillOverridesMaxChars`) though only `contextRoot` is
+  read — WI-5 owns the rest.
+- `packages/context-core/src/fs/resolve-path.ts` — `resolveContextPath()` /
+  `toLogicalContextPath()`, the one shared logical-`context/...`-to-physical
+  helper every corpus-path-resolving function now goes through. Throws
+  `ScopeViolationError` (not a plain `Error`) on a malformed logical path.
+- `createLoader()` gains optional `{ root }`. The parameter several functions
+  called `repoRoot` (`resolveScope`, `walkContext`, `resolveCitation`,
+  `verifyCitation`, `readContextFile`, `validateCorpus`, `writeFindings`,
+  `appendOutcome`) is renamed to `root` — it always meant corpus root, never
+  repo root; `repoRoot` stays required on `createLoader` itself and still
+  governs `schemaDir`/`taintLedgerPath` (genuinely repo-relative, unaffected).
+- `git mv context/{org,demand-gen,legal,accounts} → examples/demo-corpus/`.
+  `context/` now holds only `schema/` (unmoved — schema is repo-relative, not
+  corpus-relative), `templates/` (new, empty, WI-5 fills it), `.gitkeep`.
+  History preserved (`git log --follow`); `corpus.lock.json` regenerated,
+  byte-identical hashes, unchanged logical keys.
+- `corpus:validate` / `check:no-real-data` / `eval:lock` / the eval runner all
+  default to `examples/demo-corpus`, accept `--root`/`ASH_CONTEXT_ROOT`,
+  verified (adversarially, via a poisoned `ash.config.json`) to never fall
+  through to it when no override is given.
+- New `pnpm check:context-empty` — blocking CI guard, allowlist
+  `{schema, templates, .gitkeep}` at the top level of `context/` only (shallow,
+  not recursive).
+- `.claude/hooks/protect-paths.ts` + `.claude/settings.json` protect **both**
+  `context/**` and `examples/demo-corpus/**` (belt-and-braces during the
+  transition — spec judgement call #4).
+- No skill YAML, eval-case path, or citation-path string touched anywhere —
+  `pnpm skills:sync:check` shows no drift. The load-bearing design call (spec
+  judgement call #1: `context/` is a logical prefix the loader rewrites to the
+  physical root at resolution time, not a root-relative-grants rewrite) held
+  through the full implementation with zero skill-contract churn.
+
+**Five Important-severity findings from review, fixed before merge:** an
+unused `DEFAULT_ASH_CONFIG` constant; a plain `Error` in `resolveContextPath`
+that should have been (and now is) `ScopeViolationError`; a false-positive-green
+gap in `corpus:validate`'s CLI (a stale `--root`/positional arg silently
+reporting "OK" on 0 files checked instead of flagging it); a missing
+`checkContextEmpty` export from `index.ts`'s public barrel; and (this session,
+not a code review finding) the eval run itself needing a workspace-scoped API
+key — see the `ANTHROPIC_API_KEY` note above.
+
+**Deviation from the spec's explicit function list (not a defect, a scope
+correction):** `findings/write-findings.ts`, `outcomes/append-outcome.ts`, and
+one direct read in `evals/runner/run-suite.ts` (the rubric judge's raw
+meeting-note text) weren't named in the spec's "functions to touch" list but
+had the identical bug — they built a logical `context/...` string internally
+and joined it straight onto `repoRoot`. Left alone, findings/outcomes writes
+would have silently landed in the emptied `context/` tree instead of
+`examples/demo-corpus/`, a latent bug WI-2 would have inherited. Fixed in the
+same PR; flagged during plan-mode exploration, not discovered late.
