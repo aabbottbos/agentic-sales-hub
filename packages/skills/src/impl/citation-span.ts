@@ -23,14 +23,15 @@ export function unify(s: string): string {
 
 /**
  * Resolve a model citation `{path, quote}` to `{path, quote, span}` by locating
- * the quote in the note. The model cannot count byte offsets (spec 002 OQ7), so
- * it returns substrings and the skill computes the span.
+ * the quote in the source text. The model cannot count byte offsets (spec 002
+ * OQ7), so it returns substrings and the skill computes the span.
  *
  * Tried in order: (1) exact, (2) whitespace-insensitive, (3) punctuation-unified
- * (smart quotes/dashes), (4) longest verbatim run of the quote that is >= 24
- * chars and >= 60% of its length (covers a model adding or altering a word at an
- * edge). Returns null if none hit — the caller then flags an out-of-range span so
- * the citation-validity gate fails rather than the run crashing.
+ * (smart quotes/dashes), (4) longest verbatim run of the quote, down to
+ * `minRun = min(16, quote length)` (no percentage floor — covers a model adding
+ * or altering a word at an edge). Returns null if none hit — the caller then
+ * flags an out-of-range span so the citation-validity gate fails rather than the
+ * run crashing.
  */
 export function resolveCitationSpan(raw: string, cit: RawCitation): ResolvedSpanCitation | null {
   if (typeof cit.path !== "string" || typeof cit.quote !== "string" || cit.quote.length === 0) {
@@ -64,8 +65,8 @@ export function resolveCitationSpan(raw: string, cit: RawCitation): ResolvedSpan
     };
   }
 
-  // 4. longest verbatim run of the (unified) quote present in the (unified) note.
-  // A model quote is a paraphrase-free selection of note text; if it added or
+  // 4. longest verbatim run of the (unified) quote present in the (unified) source text.
+  // A model quote is a paraphrase-free selection of source text; if it added or
   // changed a word at an edge, the bulk of it still appears verbatim. Accept the
   // longest such run down to 16 chars — enough to be a real anchor, short enough
   // to tolerate a couple of altered words.
