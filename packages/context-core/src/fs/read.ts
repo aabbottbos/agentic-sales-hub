@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, relative } from "node:path";
 import { classify } from "../frontmatter/classify.js";
 import { parseFrontmatter } from "../frontmatter/parse.js";
 import { validateAgainst } from "../schema/validate.js";
@@ -7,16 +7,17 @@ import type { SchemaRegistry } from "../schema/registry.js";
 import { isSchemaVersionAccepted } from "../schema/registry.js";
 import { sha256 } from "../quarantine/hash.js";
 import { SchemaValidationError, SourceHashMismatchError, UnreadableError } from "../errors.js";
+import { resolveContextPath } from "./resolve-path.js";
 import type { ContextFile } from "../types.js";
 
 export interface ReadContextFileOptions {
-  repoRoot: string;
+  root: string;
   registry: SchemaRegistry;
 }
 
-/** Convert an absolute or repo-relative path to a normalized repo-relative posix path. */
-export function toRepoRelative(repoRoot: string, p: string): string {
-  const rel = isAbsolute(p) ? relative(repoRoot, p) : p;
+/** Convert an absolute or root-relative path to a normalized root-relative posix path. */
+export function toRepoRelative(root: string, p: string): string {
+  const rel = isAbsolute(p) ? relative(root, p) : p;
   return rel.replaceAll("\\", "/");
 }
 
@@ -31,8 +32,8 @@ export async function readContextFile(
   path: string,
   opts: ReadContextFileOptions,
 ): Promise<ContextFile> {
-  const repoRel = toRepoRelative(opts.repoRoot, path);
-  const absPath = isAbsolute(path) ? path : join(opts.repoRoot, repoRel);
+  const repoRel = toRepoRelative(opts.root, path);
+  const absPath = resolveContextPath(repoRel, opts.root);
 
   const cls = classify(repoRel);
   if (!cls) {

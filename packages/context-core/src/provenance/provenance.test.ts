@@ -6,15 +6,16 @@ import { resolveCitation } from "./resolve-citation.js";
 import { verifyCitation } from "./verify-citation.js";
 import { CitationUnresolvableError } from "../errors.js";
 import { normalizeNewlines } from "../frontmatter/parse.js";
+import { resolveContextPath } from "../fs/resolve-path.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixturesRoot = join(here, "../../test/fixtures");
+const fixturesRoot = join(here, "../../test/fixtures/context");
 
 const indemnityPath = "context/legal/clause-library/indemnity.md";
 const liabilityPath = "context/legal/clause-library/liability.md";
 
 async function spanOf(relPath: string, needle: string): Promise<[number, number]> {
-  const raw = normalizeNewlines(await readFile(join(fixturesRoot, relPath), "utf8"));
+  const raw = normalizeNewlines(await readFile(resolveContextPath(relPath, fixturesRoot), "utf8"));
   const start = raw.indexOf(needle);
   if (start < 0) throw new Error(`needle not found: ${needle}`);
   return [start, start + needle.length];

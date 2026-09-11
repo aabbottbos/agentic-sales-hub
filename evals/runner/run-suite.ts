@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import {
   createLoader,
   normalizeNewlines,
+  resolveContextRoot,
+  resolveContextPath,
   type ContextLoader,
   type Finding,
   type RetrievalHit,
@@ -22,6 +24,14 @@ import { runInjectionHarness } from "./injection-harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(here, "../..");
+
+// No CLI flag for this — `evals/runner/cli.ts` doesn't expose a `--root`
+// passthrough. `ASH_CONTEXT_ROOT` is sufficient for overriding the demo
+// default; the CLI flag is out of scope here.
+const CONTEXT_ROOT = resolveContextRoot({
+  root: process.env.ASH_CONTEXT_ROOT ?? join(REPO_ROOT, "examples/demo-corpus"),
+  cwd: REPO_ROOT,
+});
 
 export type SuiteName = "sow-review" | "find-evidence" | "call-summary";
 export const ALL_SUITES: SuiteName[] = ["sow-review", "find-evidence", "call-summary"];
@@ -72,6 +82,7 @@ const CASES_DIR = join(REPO_ROOT, "evals/cases");
 function makeLoader(): Promise<ContextLoader> {
   return createLoader({
     repoRoot: REPO_ROOT,
+    root: CONTEXT_ROOT,
     taintLedgerPath: join(REPO_ROOT, ".claude/.taint-ledger.eval.jsonl"),
   });
 }
@@ -225,7 +236,7 @@ async function runGenerationSuite(): Promise<SuiteResult> {
     const citations = await scoreRetrievalCitations(loader, flatCitations);
 
     const noteText = normalizeNewlines(
-      await readFile(join(REPO_ROOT, c.input.meeting_path), "utf8"),
+      await readFile(resolveContextPath(c.input.meeting_path, CONTEXT_ROOT), "utf8"),
     );
     const rubric = await scoreRubric(output, noteText);
 

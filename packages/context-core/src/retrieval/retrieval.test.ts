@@ -11,7 +11,7 @@ import type { ContextFile } from "../types.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../../..");
 const schemaDir = join(repoRoot, "context/schema");
-const fixturesRoot = join(here, "../../test/fixtures");
+const fixturesRoot = join(here, "../../test/fixtures/context");
 
 let registry: SchemaRegistry;
 let scope: ContextFile[];
@@ -27,9 +27,7 @@ beforeAll(async () => {
     "context/legal/clause-library/liability.md",
     `context/accounts/fix-co/opportunities/${OPP}/artifacts/a-0001-brief.md`,
   ];
-  scope = await Promise.all(
-    paths.map((p) => readContextFile(p, { repoRoot: fixturesRoot, registry })),
-  );
+  scope = await Promise.all(paths.map((p) => readContextFile(p, { root: fixturesRoot, registry })));
 });
 
 describe("search", () => {

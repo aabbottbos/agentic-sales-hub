@@ -33,6 +33,15 @@ describe("protect-paths hook", () => {
     expect(stderr).toMatch(/protected path/);
   });
 
+  it("blocks a Write to examples/demo-corpus/legal/** (tenancy seam: both roots protected)", () => {
+    const { code, stderr } = runHook(protectHook, {
+      tool_name: "Write",
+      tool_input: { file_path: "examples/demo-corpus/legal/guidance.md", content: "x" },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/protected path/);
+  });
+
   it("blocks a Write to evals/golden/**", () => {
     const { code } = runHook(protectHook, {
       tool_name: "Write",
@@ -59,6 +68,24 @@ describe("protect-paths hook", () => {
     expect(code).toBe(2);
   });
 
+  it("blocks rm against an opportunity subtree under examples/demo-corpus", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Bash",
+      tool_input: {
+        command: `rm examples/demo-corpus/accounts/acme-logistics/opportunities/${OPP}/meetings/2026-07-14-discovery.md`,
+      },
+    });
+    expect(code).toBe(2);
+  });
+
+  it("blocks a Bash command targeting examples/demo-corpus/legal/**", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Bash",
+      tool_input: { command: "rm examples/demo-corpus/legal/guidance.md" },
+    });
+    expect(code).toBe(2);
+  });
+
   it("allows an unrelated Bash command", () => {
     const { code } = runHook(protectHook, {
       tool_name: "Bash",
@@ -72,7 +99,11 @@ describe("quarantine-inbound hook", () => {
   beforeAll(async () => {
     // ingest the SOW redline so the taint ledger has its shingles
     await rm(ledgerPath, { force: true });
-    const loader = await createLoader({ repoRoot, taintLedgerPath: ledgerPath });
+    const loader = await createLoader({
+      repoRoot,
+      root: join(repoRoot, "examples/demo-corpus"),
+      taintLedgerPath: ledgerPath,
+    });
     await loader.readInbound(sowRedline);
   });
   afterAll(async () => {

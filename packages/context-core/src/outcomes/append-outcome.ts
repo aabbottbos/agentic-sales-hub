@@ -1,12 +1,13 @@
 import { appendFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { validateAgainst } from "../schema/validate.js";
 import type { SchemaRegistry } from "../schema/registry.js";
 import { SchemaValidationError } from "../errors.js";
+import { resolveContextPath } from "../fs/resolve-path.js";
 import type { AppendOutcomeArgs } from "../types.js";
 
 export interface AppendOutcomeDeps {
-  repoRoot: string;
+  root: string;
   registry: SchemaRegistry;
 }
 
@@ -32,7 +33,7 @@ export async function appendOutcome(
   }
 
   const relPath = `context/accounts/${args.accountSlug}/opportunities/${args.crmId}/outcomes.jsonl`;
-  const absPath = join(deps.repoRoot, relPath);
+  const absPath = resolveContextPath(relPath, deps.root);
   await mkdir(dirname(absPath), { recursive: true });
   await appendFile(absPath, JSON.stringify(record) + "\n", "utf8");
   return { outcomesPath: relPath };

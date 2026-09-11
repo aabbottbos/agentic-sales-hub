@@ -1,6 +1,6 @@
 # CORPUS.md
 
-**Everything under `context/` (outside `context/schema/`) is fictional.**
+**Everything under `examples/demo-corpus/` is fictional.**
 
 Nothing in this repository describes, quotes, or is derived from a real company,
 person, deal, contract, or set of terms. "Meridian Grid," "Acme Logistics,"
@@ -14,7 +14,7 @@ position is invented for the purpose of exercising and demonstrating Agentic Sal
   templates are written from scratch to be *opinionated* and *checkable*, not to
   reproduce anyone's paper.
 - Every corpus file's frontmatter carries `fictional: true`. CI
-  (`pnpm check:no-real-data`) fails on any file under `context/` that does not.
+  (`pnpm check:no-real-data`) fails on any file under `examples/demo-corpus/` that does not.
 - Account slugs must match the synthetic namespace
   (`meridian-`, `acme-`, `northwind-`, `globex-`, `initech-`) or be listed in
   `evals/golden/allowed-slugs.txt`.

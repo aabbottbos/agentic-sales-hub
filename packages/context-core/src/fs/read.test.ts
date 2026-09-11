@@ -10,7 +10,7 @@ import { SchemaValidationError, SourceHashMismatchError, UnreadableError } from 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../../..");
 const schemaDir = join(repoRoot, "context/schema");
-const fixturesRoot = join(here, "../../test/fixtures");
+const fixturesRoot = join(here, "../../test/fixtures/context");
 
 let registry: SchemaRegistry;
 beforeAll(async () => {
@@ -31,7 +31,7 @@ describe("walkContext", () => {
 
 describe("readContextFile", () => {
   it("reads and validates a canonical file", async () => {
-    const f = await readContextFile("context/org/company.md", { repoRoot: fixturesRoot, registry });
+    const f = await readContextFile("context/org/company.md", { root: fixturesRoot, registry });
     expect(f.schemaType).toBe("org-company");
     expect(f.mutability).toBe("canonical");
     expect(f.quarantined).toBe(false);
@@ -43,7 +43,7 @@ describe("readContextFile", () => {
 
   it("reads an inbound file and verifies its source_hash", async () => {
     const f = await readContextFile(`${opp}/inbound/2026-09-03-fixture-redline.md`, {
-      repoRoot: fixturesRoot,
+      root: fixturesRoot,
       registry,
     });
     expect(f.schemaType).toBe("inbound");
@@ -55,7 +55,7 @@ describe("readContextFile", () => {
   it("throws SourceHashMismatchError for a tampered inbound file", async () => {
     await expect(
       readContextFile(`${opp}/inbound/2026-09-04-tampered.md`, {
-        repoRoot: fixturesRoot,
+        root: fixturesRoot,
         registry,
       }),
     ).rejects.toBeInstanceOf(SourceHashMismatchError);
@@ -63,19 +63,19 @@ describe("readContextFile", () => {
 
   it("throws SchemaValidationError for a classifiable file with no frontmatter", async () => {
     await expect(
-      readContextFile("context/org/pricing.md", { repoRoot: fixturesRoot, registry }),
+      readContextFile("context/org/pricing.md", { root: fixturesRoot, registry }),
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
   it("throws UnreadableError for a path that does not classify", async () => {
     await expect(
-      readContextFile("context/org/bad-extra-field.md", { repoRoot: fixturesRoot, registry }),
+      readContextFile("context/org/bad-extra-field.md", { root: fixturesRoot, registry }),
     ).rejects.toBeInstanceOf(UnreadableError);
   });
 
   it("throws UnreadableError for a missing file at a classifiable path", async () => {
     await expect(
-      readContextFile("context/org/company.md", { repoRoot: join(fixturesRoot, "nope"), registry }),
+      readContextFile("context/org/company.md", { root: join(fixturesRoot, "nope"), registry }),
     ).rejects.toBeInstanceOf(UnreadableError);
   });
 });

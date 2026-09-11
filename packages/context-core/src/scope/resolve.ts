@@ -40,14 +40,17 @@ function assertInsideContext(pattern: string): void {
 }
 
 /**
- * Resolve a skill's read grants to a concrete, sorted list of repo-relative
- * file paths. Pure glob expansion against the real tree — no semantics, ever
- * (spec §4.2). `repoRoot` is the directory `context/` sits in.
+ * Resolve a skill's read grants to a concrete, sorted list of LOGICAL
+ * `context/...`-prefixed file paths. Pure glob expansion against the real
+ * tree — no semantics, ever (spec §4.2). `root` is the physical corpus root
+ * (what `context/` logically refers to); grant globs are logical
+ * `context/...` patterns, stripped of that prefix before globbing against
+ * `root`, then re-prefixed so the return value stays logical.
  */
 export async function resolveScope(
   grants: ContextGrants,
   params: ScopeParams,
-  repoRoot: string,
+  root: string,
 ): Promise<string[]> {
   const patterns = grants.read.map((p) => {
     const sub = substitute(p, params);
@@ -55,8 +58,11 @@ export async function resolveScope(
     return sub;
   });
 
-  const matched = (await glob(patterns, { cwd: repoRoot, onlyFiles: true, dot: false })).map((m) =>
-    m.replaceAll("\\", "/"),
+  // assertInsideContext guarantees every pattern starts with "context/".
+  const strippedPatterns = patterns.map((p) => p.slice("context/".length));
+
+  const matched = (await glob(strippedPatterns, { cwd: root, onlyFiles: true, dot: false })).map(
+    (m) => `context/${m.replaceAll("\\", "/")}`,
   );
 
   if (params.documentPath) {

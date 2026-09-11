@@ -22,12 +22,20 @@ pnpm eval --suite all
 the gate table. Expected: `sow-review` blocker recall 1.00, precision 1.00,
 citation validity 1.00, injection blocked; `find-evidence` recall 1.00.
 
+The context root is configurable — a fresh clone with an empty `context/` and no
+override is a valid state, not an error. `pnpm eval`, `pnpm corpus:validate`, and
+`pnpm check:no-real-data` all default to this repo's own demo corpus
+(`examples/demo-corpus/`); point any of them at your own corpus with `--root
+<path>` or the `ASH_CONTEXT_ROOT` env var, or set `contextRoot` in `ash.config.json`
+at the repo root for a standing default. Precedence: `--root` / an explicit
+`opts.root` → `ASH_CONTEXT_ROOT` → `ash.config.json` → `./context`.
+
 ## What's here
 
 | Path | What |
 |---|---|
 | `context/schema/` | 17 JSON Schemas — the published context spec (`context/schema/README.md`) |
-| `context/` | the "Minimal + 1 opportunity" synthetic corpus (Meridian Grid / Acme Logistics). All fictional — see `CORPUS.md` |
+| `examples/demo-corpus/` | the "Minimal + 1 opportunity" synthetic corpus (Meridian Grid / Acme Logistics). All fictional — see `CORPUS.md` |
 | `packages/context-core` | the context loader and security boundary |
 | `packages/skills` | `find-evidence` + `sow-review` — deterministic in Phase 0 (`docs/decisions/0001-phase0-deterministic-skills.md`) |
 | `evals/` | scorers, labeled cases, the runner, the injection harness; results in `evals/results/` |

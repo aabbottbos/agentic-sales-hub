@@ -6,7 +6,7 @@ import { ScopeViolationError } from "../errors.js";
 import type { ContextGrants } from "../types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixturesRoot = join(here, "../../test/fixtures");
+const fixturesRoot = join(here, "../../test/fixtures/context");
 
 const OPP = "006Ax0000GkLmNpQAA";
 const oppDir = `context/accounts/fix-co/opportunities/${OPP}`;
