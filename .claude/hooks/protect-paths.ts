@@ -4,12 +4,18 @@
  * against append-only context.
  *
  * Protected from any Write/Edit/MultiEdit:
- *   - context/legal/            (canonical, PR-reviewed only)
- *   - evals/golden/             (the golden eval set)
- *   - docs/intent/, docs/specs/ (committed SDLC artifacts are immutable)
+ *   - context/legal/, examples/demo-corpus/legal/   (canonical, PR-reviewed only)
+ *   - evals/golden/                                  (the golden eval set)
+ *   - docs/intent/, docs/specs/                       (committed SDLC artifacts are immutable)
+ *
+ * Both `context/` and `examples/demo-corpus/` are covered (tenancy seam,
+ * WI-1): the demo corpus physically lives at `examples/demo-corpus/`, but a
+ * file mistakenly planted under the now-sparse `context/` before
+ * `check:context-empty` catches it must still be protected. Belt-and-braces.
  *
  * Blocked Bash: rm / git rm / mv targeting an append-only opportunity subtree
- * under context/accounts, or the protected canonical paths.
+ * under context/accounts or examples/demo-corpus/accounts, or the protected
+ * canonical paths.
  *
  * Exit 0 = allow. Exit 2 = block.
  */
@@ -25,12 +31,13 @@ function readStdin(): Promise<string> {
 
 const PROTECTED_WRITE = [
   /^context\/legal\//,
+  /^examples\/demo-corpus\/legal\//,
   /^evals\/golden\//,
   /^docs\/intent\//,
   /^docs\/specs\//,
 ];
 
-const APPEND_ONLY = /context\/accounts\/[^/]+\/opportunities\//;
+const APPEND_ONLY = /(?:context|examples\/demo-corpus)\/accounts\/[^/]+\/opportunities\//;
 
 function block(reason: string): never {
   process.stderr.write(`BLOCKED (protect-paths): ${reason}\n`);
@@ -79,7 +86,11 @@ async function main(): Promise<void> {
             `nothing under an opportunity subtree is deleted or moved (CLAUDE.md invariant 3).`,
         );
       }
-      if (/context\/legal\//.test(args) || /evals\/golden\//.test(args)) {
+      if (
+        /context\/legal\//.test(args) ||
+        /examples\/demo-corpus\/legal\//.test(args) ||
+        /evals\/golden\//.test(args)
+      ) {
         block(`command targets a protected path: ${cmd.slice(0, 120)}`);
       }
     }

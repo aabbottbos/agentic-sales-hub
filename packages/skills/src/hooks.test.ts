@@ -33,6 +33,15 @@ describe("protect-paths hook", () => {
     expect(stderr).toMatch(/protected path/);
   });
 
+  it("blocks a Write to examples/demo-corpus/legal/** (tenancy seam: both roots protected)", () => {
+    const { code, stderr } = runHook(protectHook, {
+      tool_name: "Write",
+      tool_input: { file_path: "examples/demo-corpus/legal/guidance.md", content: "x" },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/protected path/);
+  });
+
   it("blocks a Write to evals/golden/**", () => {
     const { code } = runHook(protectHook, {
       tool_name: "Write",
@@ -55,6 +64,24 @@ describe("protect-paths hook", () => {
       tool_input: {
         command: `rm context/accounts/acme-logistics/opportunities/${OPP}/meetings/2026-07-14-discovery.md`,
       },
+    });
+    expect(code).toBe(2);
+  });
+
+  it("blocks rm against an opportunity subtree under examples/demo-corpus", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Bash",
+      tool_input: {
+        command: `rm examples/demo-corpus/accounts/acme-logistics/opportunities/${OPP}/meetings/2026-07-14-discovery.md`,
+      },
+    });
+    expect(code).toBe(2);
+  });
+
+  it("blocks a Bash command targeting examples/demo-corpus/legal/**", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Bash",
+      tool_input: { command: "rm examples/demo-corpus/legal/guidance.md" },
     });
     expect(code).toBe(2);
   });

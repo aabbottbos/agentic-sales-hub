@@ -14,8 +14,11 @@
     ],
     "deny": [
       "Read(./context/accounts/**/inbound/**)",
+      "Read(./examples/demo-corpus/accounts/**/inbound/**)",
       "Write(./context/legal/**)",
       "Edit(./context/legal/**)",
+      "Write(./examples/demo-corpus/legal/**)",
+      "Edit(./examples/demo-corpus/legal/**)",
       "Write(./evals/golden/**)",
       "Edit(./evals/golden/**)"
     ]
