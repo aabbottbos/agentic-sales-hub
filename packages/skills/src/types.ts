@@ -36,6 +36,8 @@ export interface SkillRunResult<T = unknown> {
   contextRead: string[];
   /** Present for skills whose definition sets `output.requires_citations`. */
   citationsValid?: boolean;
+  /** Present for generation-tier skills with a write grant, once persisted. */
+  artifactPath?: string;
   trace: TraceEntry[];
 }
 

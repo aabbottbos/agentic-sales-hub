@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, beforeAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
-import { runSkill, validateInput } from "./runner.js";
+import { runSkill, validateInput, flattenCitations } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
 import * as llm from "./impl/llm.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
@@ -263,5 +265,191 @@ describe("runSkill generation branch (call-summary, stubbed)", () => {
         { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
       ),
     ).rejects.toThrow(/no valid output after \d+ attempts/i);
+  });
+});
+
+describe("flattenCitations", () => {
+  it("flattens call-summary-shaped output (citations nested under commitments/next_steps/context_deltas, plus a bare top-level citations[])", () => {
+    const output = {
+      summary: "x",
+      commitments: [{ text: "a", owner: "us", citation: { path: "p1.md", span: [0, 5] } }],
+      next_steps: [{ text: "b", owner: "us", citation: { path: "p2.md", span: [10, 15] } }],
+      context_deltas: [
+        { field: "risk", observation: "c", citation: { path: "p3.md", span: [20, 25] } },
+      ],
+      citations: [{ path: "p4.md", span: [30, 35] }],
+      unsourced_claims: [],
+    };
+    const result = flattenCitations(output);
+    const keys = result.map((c) => `${c.path}:${c.span[0]}-${c.span[1]}`).sort();
+    expect(keys).toEqual(["p1.md:0-5", "p2.md:10-15", "p3.md:20-25", "p4.md:30-35"]);
+  });
+
+  it("flattens call-prep-shaped output (citations nested under what_we_know/talking_points/risks)", () => {
+    const output = {
+      goal: "x",
+      what_we_know: [{ text: "a", citation: { path: "p1.md", quote: "a", span: [0, 5] } }],
+      talking_points: [{ text: "b", citation: { path: "p2.md", quote: "b", span: [10, 15] } }],
+      risks: [{ text: "c", citation: { path: "p3.md", quote: "c", span: [20, 25] } }],
+      citations: [{ path: "p4.md", quote: "d", span: [30, 35] }],
+      unsourced_claims: [],
+    };
+    const result = flattenCitations(output);
+    const keys = result.map((c) => `${c.path}:${c.span[0]}-${c.span[1]}`).sort();
+    expect(keys).toEqual(["p1.md:0-5", "p2.md:10-15", "p3.md:20-25", "p4.md:30-35"]);
+  });
+
+  it("de-duplicates the same {path, span} cited from multiple fields", () => {
+    const shared = { path: "p1.md", span: [0, 5] };
+    const output = {
+      commitments: [{ citation: shared }],
+      next_steps: [{ citation: shared }],
+      context_deltas: [],
+      citations: [shared],
+    };
+    const result = flattenCitations(output);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(shared);
+  });
+
+  it("does not throw on a legitimately citation-free output (citations: [], every item array [], unsourced_claims present) — returns []", () => {
+    const output = {
+      goal: "x",
+      what_we_know: [],
+      talking_points: [],
+      risks: [],
+      citations: [],
+      unsourced_claims: ["x"],
+    };
+    expect(flattenCitations(output)).toEqual([]);
+  });
+
+  it("throws on an object with no citations array field at all and no array-of-cited-items field either", () => {
+    const output = { goal: "x", note: "no citation-shaped field anywhere" };
+    expect(() => flattenCitations(output)).toThrow(/no citation-shaped field/i);
+  });
+
+  it("throws when an item's .citation property exists but is malformed (missing span)", () => {
+    const output = {
+      goal: "x",
+      what_we_know: [{ text: "a", citation: { path: "p1.md" } }],
+      talking_points: [],
+      risks: [],
+      citations: [],
+      unsourced_claims: [],
+    };
+    expect(() => flattenCitations(output)).toThrow(/malformed \.citation/i);
+  });
+
+  it("ignores non-citation array fields (e.g. unsourced_claims: string[]) without throwing", () => {
+    const output = {
+      goal: "x",
+      what_we_know: [],
+      talking_points: [],
+      risks: [],
+      citations: [{ path: "p1.md", span: [0, 5] }],
+      unsourced_claims: ["claim one", "claim two"],
+    };
+    const result = flattenCitations(output);
+    expect(result).toEqual([{ path: "p1.md", span: [0, 5] }]);
+  });
+});
+
+describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () => {
+  /** mkdtemp + cp of examples/demo-corpus/ — the first place the skills
+   *  package's tests need a real-write scratch copy (writeArtifact() writes
+   *  a new file under artifacts/, which must not land in the committed
+   *  demo-corpus). */
+  async function scratchCorpus(): Promise<{ tmpDir: string; loader: ContextLoader }> {
+    const tmpDir = await mkdtemp(join(tmpdir(), "call-prep-"));
+    const corpusRoot = join(tmpDir, "demo-corpus");
+    await cp(join(repoRoot, "examples/demo-corpus"), corpusRoot, { recursive: true });
+    const scratchLoader = await createLoader({
+      repoRoot,
+      root: corpusRoot,
+      taintLedgerPath: join(tmpDir, ".taint-ledger.jsonl"),
+    });
+    return { tmpDir, loader: scratchLoader };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("persists a valid BriefOutput as an artifact; citationsValid true, artifactPath returned, artifact readable back", async () => {
+    const { tmpDir, loader: scratchLoader } = await scratchCorpus();
+    try {
+      const raw = await readFile(join(tmpDir, "demo-corpus/org/company.md"), "utf8");
+      const quoteStart = raw.indexOf("Meridian Grid is a mid-market B2B company");
+      const quote = raw.slice(
+        quoteStart,
+        quoteStart + "Meridian Grid is a mid-market B2B company".length,
+      );
+      const citation = { path: "context/org/company.md", quote, span: [0, 0] as [number, number] };
+
+      const stub = JSON.stringify({
+        goal: "Confirm scope and champion alignment",
+        what_we_know: [{ text: "Meridian sells a supply-chain visibility platform.", citation }],
+        talking_points: [{ text: "Lead with the services attach.", citation }],
+        risks: [{ text: "Budget owner not yet confirmed.", citation }],
+        citations: [{ path: "context/org/company.md", quote }],
+        unsourced_claims: [],
+      });
+      vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+      const result = await runSkill(
+        "call-prep",
+        { account_slug: "acme-logistics", opp_id: OPP },
+        { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      );
+
+      expect(result.citationsValid).toBe(true);
+      expect(result.artifactPath).toMatch(
+        new RegExp(
+          `^context/accounts/acme-logistics/opportunities/${OPP}/artifacts/a-\\d{4}-brief\\.md$`,
+        ),
+      );
+
+      const written = await readFile(
+        join(tmpDir, "demo-corpus", result.artifactPath!.replace(/^context\//, "")),
+        "utf8",
+      );
+      expect(written).toContain("generated_by: call-prep");
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to persist when a citation quote cannot be found (out-of-range span) — citationsValid false, writeArtifact not called, throws", async () => {
+    const { tmpDir, loader: scratchLoader } = await scratchCorpus();
+    try {
+      const badCitation = {
+        path: "context/org/company.md",
+        quote: "this exact phrase does not appear anywhere in the corpus",
+        span: [0, 0] as [number, number],
+      };
+      const stub = JSON.stringify({
+        goal: "x",
+        what_we_know: [{ text: "a", citation: badCitation }],
+        talking_points: [],
+        risks: [],
+        citations: [],
+        unsourced_claims: [],
+      });
+      vi.spyOn(llm, "complete").mockResolvedValue(stub);
+      const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
+
+      await expect(
+        runSkill(
+          "call-prep",
+          { account_slug: "acme-logistics", opp_id: OPP },
+          { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        ),
+      ).rejects.toThrow(/citation validity/i);
+
+      expect(writeArtifactSpy).not.toHaveBeenCalled();
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
   });
 });
