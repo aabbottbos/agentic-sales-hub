@@ -4,6 +4,7 @@ import { complete } from "./llm.js";
 import { buildSystemPrompt, buildUserPrompt, type ContextFile } from "./call-prep.prompt.js";
 import { validateBriefOutput, type BriefOutput } from "./brief-schema.js";
 import { resolveCitationSpan, type RawCitation } from "./citation-span.js";
+import { extractJsonObject } from "./json-extract.js";
 
 interface CallPrepInput {
   account_slug: string;
@@ -16,42 +17,6 @@ const MODEL = "claude-sonnet-5";
 // file, not one note), so the return object tends to run larger than
 // call-summary's single-document summary. Same shape of budget, more headroom.
 const MAX_TOKENS = 6144;
-
-/**
- * Extract the first balanced top-level JSON object from a model response. The
- * prompt asks for bare JSON; this tolerates the model wrapping it in a sentence
- * or a code fence.
- *
- * Duplicated from call-summary.ts rather than imported: it is a private,
- * unexported helper there, and per the task instructions call-summary.ts is not
- * to be touched in this slice. If a third generation skill needs this later,
- * that is the point to extract it to a shared module (same argument that moved
- * `resolveCitationSpan` into citation-span.ts) — not a decision to make
- * unilaterally on a two-instance precedent alone.
- */
-function extractJsonObject(text: string): string | null {
-  const start = text.indexOf("{");
-  if (start < 0) return null;
-  let depth = 0;
-  let inStr = false;
-  let esc = false;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (ch === "\\") esc = true;
-      else if (ch === '"') inStr = false;
-    } else if (ch === '"') {
-      inStr = true;
-    } else if (ch === "{") {
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
-}
 
 /**
  * LLM-backed generation-tier impl (spec 002 / plan 004). Unlike call-summary

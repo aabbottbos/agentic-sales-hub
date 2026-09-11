@@ -4,6 +4,7 @@ import { complete } from "./llm.js";
 import { buildSystemPrompt, buildUserPrompt } from "./call-summary.prompt.js";
 import { validateSummaryOutput, type SummaryOutput } from "./summary-schema.js";
 import { resolveCitationSpan, type RawCitation } from "./citation-span.js";
+import { extractJsonObject } from "./json-extract.js";
 
 interface CallSummaryInput {
   meeting_path: string;
@@ -14,35 +15,6 @@ const MODEL = "claude-sonnet-5";
 // next_steps + context_deltas + citations, all as JSON) runs 3-5k tokens on the
 // corpus notes. 2048 truncated mid-object; 6144 leaves headroom.
 const MAX_TOKENS = 6144;
-
-/**
- * Extract the first balanced top-level JSON object from a model response. The
- * prompt asks for bare JSON; this tolerates the model wrapping it in a sentence
- * or a code fence.
- */
-function extractJsonObject(text: string): string | null {
-  const start = text.indexOf("{");
-  if (start < 0) return null;
-  let depth = 0;
-  let inStr = false;
-  let esc = false;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (ch === "\\") esc = true;
-      else if (ch === '"') inStr = false;
-    } else if (ch === '"') {
-      inStr = true;
-    } else if (ch === "{") {
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
-}
 
 /**
  * LLM-backed generation-tier impl (spec 002). Reads exactly one corpus meeting
