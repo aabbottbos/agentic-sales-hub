@@ -2,7 +2,62 @@
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
 Last updated: **2026-09-11** (WI-1 / intent 003 tenancy seam **shipped** — PR #17
-merged to `main`, `d6c6329`. Next: WI-2, intent 004 — `call-prep` + the write path).
+merged to `main`, `d6c6329`. `docs/AgenticSalesHub_NorthStar_v1.md` landed the
+same day — governs all three other docs, not yet committed. Next: WI-2, intent
+004 — `call-prep` + the write path, with the North Star's deltas folded in
+first — see "The North Star" section below).
+
+## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
+
+Governs `Spec_v2.md`, the Adoptability Amendment, and the SDLC Framework —
+when a scope question can't be settled in a spec, it's settled here. Not yet
+`git add`ed; do that in a normal commit when convenient, no rush.
+
+**Thesis:** sales work should compound because the context substrate — not
+the CRM — is the system of record; augmenting existing skills with real org
+context doesn't just improve them, it makes new skills possible that weren't
+viable before. **Priority order:** (1) a Director+ role — judge everything
+else by whether it serves this, (2) the open-source repo as proof-of-earned-
+thesis, (3) a managed service, explicitly **deferred, not dead** (trigger:
+three outside orgs running it on their own context ask to be hosted).
+
+**Scope resolution — org-wide in the writing, seller-deep in the build.** The
+writeup covers the whole revenue org; the working system proves one slice
+(the deal spine, five skills + setup skill + the compounding loop) to
+evaluated depth. Deferred-by-name in the writing: pipeline inspection (the
+strongest candidate — same structured-findings contract as `sow-review`,
+first thing after the job search closes), SOW generation, CS handoff, lead
+gen/enrichment, dashboards, CRM integration.
+
+**Sequencing inversion — the writeup moves ahead of the build.** This
+supersedes Spec v2 §11's Phase 3 placement. Target: publish the thesis
+document + a ≤5-min demo video in October, on top of a 60%-built system,
+ahead of interview season (Oct–Nov). The build plan (WI chain below) keeps
+running underneath it, not blocked by it.
+
+**Three concrete deltas this creates for the amendment/roadmap** (§10):
+1. **New work item — the compounding loop.** Outcome-weighted retrieval
+   extending `find-evidence`, plus **evidence reuse rate** as a scored, gated
+   metric (the primary "did compounding actually happen" number). Not yet
+   assigned a WI slot or intent number — needs its own intent before WI-4/WI-5
+   land, since reuse rate needs the corpus requirement below to measure
+   anything.
+2. **WI-4 (corpus expansion) gains a hard requirement**: at least two of the
+   added opportunities must close (won or lost) with artifacts and
+   `outcomes.jsonl` records populated — not just more meeting notes. Update
+   intent 006 to carry this before it's written.
+3. **Non-negotiable eval gates are unchanged** (blocker recall 1.00, citation
+   validity 1.00, retrieval recall ≥ 0.90, generation rubric ≥ 4.0/5, no net
+   regression) — the North Star treats these as the proof layer, not in
+   tension with the business goal. Decision rule: never weaken a gate to hit
+   a deadline.
+
+**Two-layer packaging is a design constraint, not a nice-to-have** — a VP of
+Sales must follow the demo in 5 minutes (revenue language, deal outcomes, a
+number); a technical evaluator verifies it's real in 20 (evals, provenance,
+context spec, commit history). The repo today is all proof layer — closing
+that gap (README rewrite, demo video) is itself in-scope work, likely riding
+on WI-5's README rewrite rather than a separate item.
 
 ## Where we are
 
@@ -124,6 +179,37 @@ All six intent success criteria are met.
    (intent 003–007) is authoritative. Intent 002 (`call-summary`) shipped
    separately (PR #13). WI-1 / intent 003 (tenancy seam) shipped PR #17.
    Next up: **WI-2 / intent 004** — `call-prep` + the write path.
+4. **North Star not yet committed** — `docs/AgenticSalesHub_NorthStar_v1.md`
+   is on disk, untracked. Commit it (plain T0 docs commit) before or alongside
+   the next WI so it's governing in-repo, not just on disk.
+5. **The compounding loop has no intent number yet.** North Star §10 names it
+   as a new work item (outcome-weighted retrieval + evidence reuse rate as a
+   gated metric) but doesn't slot it into the WI-2..WI-5 chain. Needs a
+   decision: its own WI between WI-3 and WI-4, or folded into WI-4 alongside
+   the corpus-expansion closed-deal requirement (#6 below) since reuse rate
+   needs that same corpus data to compute anything.
+6. **WI-4's intent (006, not yet written) must carry the closed-deal
+   requirement**: ≥2 of the added opportunities close (won/lost) with
+   artifacts + `outcomes.jsonl` populated, not just more meeting notes. Flag
+   this at intent-writing time, not spec time — it changes the corpus design.
+7. **Two-layer packaging / demo video** — not scoped as a WI yet. Likely rides
+   on WI-5's README rewrite ("adoption path first") plus a standalone demo
+   video, needed before October per the North Star's sequencing inversion
+   (§7). Worth a T1 plan of its own once WI-4 is in flight, so it isn't a
+   December scramble.
+8. **Blocking generation-quality gate — deliberately deferred, not closed**
+   (spec 004 Judgment call #6, ratified at spec review 2026-09-11). Both
+   `call-summary` (intent 002 amendment A1) and now `call-prep` ship with
+   only citation validity as a blocking gate; the rubric (≥ 4.0/5 target) and
+   any recall-style scorer are advisory/tracked only, because the same-judge-
+   judging-same-family-output noise A1 documented made a blocking rubric
+   unreliable. Revisit once either a stabler judge setup exists (more
+   attempts + a calibrated threshold, an ensemble, or a non-token-overlap
+   claim matcher) or the golden set is large enough that one case can't
+   dominate the aggregate. Not itself a WI yet — surface at `proposal-draft`
+   (WI-3 / intent 005) planning time, since a third generation skill is
+   exactly when "no generation skill has ever had a blocking quality gate"
+   becomes harder to defend as still provisional.
 
 ## The work chain (amendment §6–§11)
 
