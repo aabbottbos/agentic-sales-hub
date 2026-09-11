@@ -1,7 +1,11 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import * as llm from "../../packages/skills/src/impl/llm.js";
 import { scoreRubric, aggregate } from "./judge.js";
 import type { SummaryOutput } from "../../packages/skills/src/impl/summary-schema.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const OUT = {
   summary: "x",
@@ -59,12 +63,39 @@ describe("scoreRubric", () => {
   });
 
   it("ignores an unparseable attempt but uses the good ones", async () => {
+    // attempts: 2 — the loop stops once it has 2 good scores. With `attempts: 3`
+    // it would keep calling past these three canned responses (by design: see
+    // judge.ts's `maxCalls = attempts + 2`), which the mock chain isn't sized for.
     vi.spyOn(llm, "complete")
       .mockResolvedValueOnce("garbage")
       .mockResolvedValueOnce('{"grounding":4,"completeness":4,"tone":4,"structure":4}')
       .mockResolvedValueOnce('{"grounding":4,"completeness":4,"tone":4,"structure":4}');
-    const r = await scoreRubric(OUT, "n", { attempts: 3 });
+    const r = await scoreRubric(OUT, "n", { attempts: 2 });
     expect(r.aggregate).toBe(4);
     expect(r.attempts).toHaveLength(2);
+  });
+
+  it("accepts an explicit rubric/prompt file pair and still retry-medians correctly", async () => {
+    const spy = vi
+      .spyOn(llm, "complete")
+      .mockResolvedValueOnce('{"grounding":3,"completeness":3,"tone":3,"structure":3}')
+      .mockResolvedValueOnce('{"grounding":5,"completeness":5,"tone":5,"structure":5}')
+      .mockResolvedValueOnce('{"grounding":4,"completeness":4,"tone":4,"structure":4}');
+    const r = await scoreRubric(OUT, "note text", {
+      attempts: 3,
+      rubricFile: join(here, "call-prep-rubric.md"),
+      promptFile: join(here, "call-prep-judge-prompt.md"),
+    });
+    // medians of [3,4,5] per dim -> 4; aggregate -> 4
+    expect(r.grounding).toBe(4);
+    expect(r.aggregate).toBe(4);
+    expect(r.attempts).toHaveLength(3);
+    // Proves the explicit files were actually loaded, not the call-summary
+    // defaults: the call-prep rubric/prompt content must be in the sent prompt,
+    // and the call-summary-only prose must not be.
+    const sentPrompt = spy.mock.calls[0]?.[0]?.user ?? "";
+    expect(sentPrompt).toContain("call-prep rubric");
+    expect(sentPrompt).toContain("BRIEF OUTPUT");
+    expect(sentPrompt).not.toContain("call-summary rubric");
   });
 });
