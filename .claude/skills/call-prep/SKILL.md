@@ -1,6 +1,6 @@
 ---
 name: call-prep
-description: Prepare a call-prep brief for an upcoming meeting on one opportunity — goal, what we know, talking points, and risks, each citing the meeting notes, org evidence, opportunity record, or prior artifacts that support it. Claims with no source are marked [unsourced], never asserted. Output is persisted as a new artifact through writeArtifact(); an outcome record opens automatically as unused.
+description: Prepare a call-prep brief for an upcoming meeting on one opportunity — goal, what we know, talking points, and risks, each citing the meeting notes, org evidence, opportunity record, or prior artifacts that support it. Claims with no source are marked [unsourced], never asserted. Output is persisted as a new artifact through writeArtifact(); an outcome record opens automatically as unused. Beyond the opportunity's own scope, the read grant also covers context/org/** (offerings and evidence to ground talking points) and context/demand-gen/** (ICP material to frame the account against the ideal-customer profile).
 allowed-tools: context.read, artifact.write
 ---
 
@@ -12,7 +12,7 @@ allowed-tools: context.read, artifact.write
 
 **Tier:** generation · **Version:** 1
 
-Prepare a call-prep brief for an upcoming meeting on one opportunity — goal, what we know, talking points, and risks, each citing the meeting notes, org evidence, opportunity record, or prior artifacts that support it. Claims with no source are marked [unsourced], never asserted. Output is persisted as a new artifact through writeArtifact(); an outcome record opens automatically as unused.
+Prepare a call-prep brief for an upcoming meeting on one opportunity — goal, what we know, talking points, and risks, each citing the meeting notes, org evidence, opportunity record, or prior artifacts that support it. Claims with no source are marked [unsourced], never asserted. Output is persisted as a new artifact through writeArtifact(); an outcome record opens automatically as unused. Beyond the opportunity's own scope, the read grant also covers context/org/** (offerings and evidence to ground talking points) and context/demand-gen/** (ICP material to frame the account against the ideal-customer profile).
 
 ## How to run it
 

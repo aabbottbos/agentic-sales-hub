@@ -7,7 +7,10 @@ description: >-
   notes, org evidence, opportunity record, or prior artifacts that support
   it. Claims with no source are marked [unsourced], never asserted. Output
   is persisted as a new artifact through writeArtifact(); an outcome record
-  opens automatically as unused.
+  opens automatically as unused. Beyond the opportunity's own scope, the
+  read grant also covers context/org/** (offerings and evidence to ground
+  talking points) and context/demand-gen/** (ICP material to frame the
+  account against the ideal-customer profile).
 context_grants:
   read:
     - context/accounts/{account}/opportunities/{opp}/meetings/**
