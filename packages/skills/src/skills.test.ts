@@ -26,9 +26,14 @@ beforeAll(async () => {
 });
 
 describe("skill registry", () => {
-  it("loads all three product skill definitions", async () => {
+  it("loads all four product skill definitions", async () => {
     const skills = await listSkills();
-    expect(skills.map((s) => s.id).sort()).toEqual(["call-summary", "find-evidence", "sow-review"]);
+    expect(skills.map((s) => s.id).sort()).toEqual([
+      "call-prep",
+      "call-summary",
+      "find-evidence",
+      "sow-review",
+    ]);
   });
 
   it("sow-review has no write grant", async () => {
@@ -44,6 +49,27 @@ describe("skill registry", () => {
     expect(def.context_grants.write).toBeUndefined();
     expect(def.tools).toEqual(["context.read"]);
     expect(def.output.schema).toBe("context/schema/summary-output.json");
+    expect(def.output.requires_citations).toBe(true);
+  });
+
+  it("call-prep is a generation skill with a wide read grant and a write grant, no legal glob", async () => {
+    const def = await loadSkill("call-prep");
+    expect(def.tier).toBe("generation");
+    expect(def.context_grants.read).toEqual([
+      "context/accounts/{account}/opportunities/{opp}/meetings/**",
+      "context/accounts/{account}/opportunities/{opp}/opportunity.md",
+      "context/accounts/{account}/opportunities/{opp}/artifacts/**",
+      "context/accounts/{account}/account.md",
+      "context/accounts/{account}/people/**",
+      "context/org/**",
+      "context/demand-gen/**",
+    ]);
+    expect(def.context_grants.read.some((g) => g.includes("legal"))).toBe(false);
+    expect(def.context_grants.write).toEqual([
+      "context/accounts/{account}/opportunities/{opp}/artifacts/**",
+    ]);
+    expect(def.tools).toEqual(["context.read", "artifact.write"]);
+    expect(def.output.schema).toBe("context/schema/brief-output.json");
     expect(def.output.requires_citations).toBe(true);
   });
 

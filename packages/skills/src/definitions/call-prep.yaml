@@ -1,0 +1,38 @@
+id: call-prep
+tier: generation
+version: 1
+description: >-
+  Prepare a call-prep brief for an upcoming meeting on one opportunity —
+  goal, what we know, talking points, and risks, each citing the meeting
+  notes, org evidence, opportunity record, or prior artifacts that support
+  it. Claims with no source are marked [unsourced], never asserted. Output
+  is persisted as a new artifact through writeArtifact(); an outcome record
+  opens automatically as unused.
+context_grants:
+  read:
+    - context/accounts/{account}/opportunities/{opp}/meetings/**
+    - context/accounts/{account}/opportunities/{opp}/opportunity.md
+    - context/accounts/{account}/opportunities/{opp}/artifacts/**
+    - context/accounts/{account}/account.md
+    - context/accounts/{account}/people/**
+    - context/org/**
+    - context/demand-gen/**
+  write:
+    - context/accounts/{account}/opportunities/{opp}/artifacts/**
+inputs:
+  account_slug:
+    type: string
+    required: true
+  opp_id:
+    type: string
+    required: true
+  meeting_context:
+    type: string
+    required: false
+output:
+  schema: context/schema/brief-output.json
+  requires_citations: true
+eval_suite: evals/cases/call-prep/
+tools:
+  - context.read
+  - artifact.write
