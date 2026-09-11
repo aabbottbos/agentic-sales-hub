@@ -23,6 +23,12 @@ function parseRootFlag(argv: string[]): string | undefined {
 }
 
 const rootFlag = parseRootFlag(process.argv.slice(2));
+// The positional arg is a legacy fallback (nothing in-repo calls it this way
+// today). Its MEANING changed with the tenancy seam: it used to be the repo
+// root; it's now the corpus root, same as --root. A stale caller passing a
+// repo root positionally will silently validate whatever `context/` (now
+// near-empty) resolves to instead — a 0-file "OK", not an error. Prefer
+// --root or ASH_CONTEXT_ROOT explicitly.
 const positionalArg = process.argv[2]?.startsWith("--") ? undefined : process.argv[2];
 
 const root = resolveContextRoot({
@@ -33,6 +39,14 @@ const root = resolveContextRoot({
 const report = await validateCorpus(repoRoot, root);
 
 if (report.errors.length === 0) {
+  if (report.filesChecked === 0) {
+    // A genuinely empty context/ (no override configured) is a valid state
+    // per design — this is not an error — but 0 files is easy to mistake
+    // for "28 files, all valid" in CI output. Flag it distinctly so a wrong
+    // --root / stale positional arg doesn't read as a clean pass.
+    console.log(`corpus:validate — OK, but 0 files checked at root "${root}"`);
+    process.exit(0);
+  }
   console.log(`corpus:validate — OK (${report.filesChecked} files, 0 errors)`);
   process.exit(0);
 }
