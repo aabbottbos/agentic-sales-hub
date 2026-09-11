@@ -63,6 +63,8 @@ export { appendOutcome } from "./outcomes/append-outcome.js";
 // Corpus validation
 export { validateCorpus } from "./validate-corpus.js";
 export type { CorpusValidationReport } from "./validate-corpus.js";
+export { checkContextEmpty } from "./check-context-empty.js";
+export type { CheckContextEmptyReport } from "./check-context-empty.js";
 
 // Errors
 export {
