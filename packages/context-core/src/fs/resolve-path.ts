@@ -1,4 +1,5 @@
 import { isAbsolute, join, relative } from "node:path";
+import { ScopeViolationError } from "../errors.js";
 
 /**
  * Resolve a logical `context/...` path to a physical path under `root`.
@@ -8,10 +9,12 @@ import { isAbsolute, join, relative } from "node:path";
  * leading `context/` segment and joins the remainder onto `root`.
  *
  * Absolute input passes through unchanged; `root` is not touched at all in
- * that case. A relative input that does not start with `context/` throws —
- * this is a defensive backstop for a caller bug, not a data-validation
- * concern (`assertInsideContext` in `scope/resolve.ts` is the primary
- * well-formedness check for grant globs).
+ * that case. A relative input that does not start with `context/` throws a
+ * `ScopeViolationError` — this is a defensive backstop for a caller bug, not
+ * a data-validation concern (`assertInsideContext` in `scope/resolve.ts` is
+ * the primary well-formedness check for grant globs). Reusing that error
+ * type (rather than a plain `Error`) lets callers branch on it the same way
+ * they already do for a grant that escapes its scope.
  */
 export function resolveContextPath(logicalPath: string, root: string): string {
   const normalized = logicalPath.replaceAll("\\", "/");
@@ -21,9 +24,7 @@ export function resolveContextPath(logicalPath: string, root: string): string {
   }
 
   if (normalized !== "context" && !normalized.startsWith("context/")) {
-    throw new Error(
-      `resolveContextPath: relative path must start with "context/", got ${JSON.stringify(logicalPath)}`,
-    );
+    throw new ScopeViolationError(logicalPath, 'relative path must start with "context/"');
   }
 
   const rest = normalized === "context" ? "" : normalized.slice("context/".length);

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { resolveContextPath, toLogicalContextPath } from "./resolve-path.js";
+import { ScopeViolationError } from "../errors.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturesRoot = join(here, "../../test/fixtures");
@@ -27,11 +28,13 @@ describe("resolveContextPath", () => {
     expect(resolveContextPath(abs, "")).toBe(abs);
   });
 
-  it("throws on a relative path that does not start with context/", () => {
+  it("throws a ScopeViolationError on a relative path that does not start with context/", () => {
     expect(() => resolveContextPath("org/company.md", "/some/root")).toThrow(
       /must start with "context\/"/,
     );
-    expect(() => resolveContextPath("legal/guidance.md", "/some/root")).toThrow(Error);
+    expect(() => resolveContextPath("legal/guidance.md", "/some/root")).toThrow(
+      ScopeViolationError,
+    );
   });
 
   it("normalizes backslashes before processing", () => {
