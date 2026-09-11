@@ -1,15 +1,16 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { assertAppendOnly } from "../fs/append-only.js";
 import { validateAgainst } from "../schema/validate.js";
 import type { SchemaRegistry } from "../schema/registry.js";
 import { sha256 } from "../quarantine/hash.js";
 import { AppendOnlyViolationError, SchemaValidationError } from "../errors.js";
 import { SCHEMA_VERSION } from "../schema/registry.js";
+import { resolveContextPath } from "../fs/resolve-path.js";
 import type { Finding, WriteFindingsArgs } from "../types.js";
 
 export interface WriteFindingsDeps {
-  repoRoot: string;
+  root: string;
   registry: SchemaRegistry;
   now?: () => Date;
 }
@@ -56,10 +57,10 @@ export async function writeFindings(
   // Runs the append-only check (create is allowed; this also rejects bad shapes).
   assertAppendOnly(relPath, "create");
 
-  const absPath = join(deps.repoRoot, relPath);
+  const absPath = resolveContextPath(relPath, deps.root);
   await assertDoesNotExist(absPath, relPath);
 
-  const sourceHash = await hashSourceDocument(deps.repoRoot, args.sourceDocument);
+  const sourceHash = await hashSourceDocument(deps.root, args.sourceDocument);
   const content = renderFindingsArtifact({
     artifactId,
     created: now.toISOString(),
@@ -91,8 +92,8 @@ async function assertDoesNotExist(absPath: string, relPath: string): Promise<voi
   );
 }
 
-async function hashSourceDocument(repoRoot: string, sourceDocument: string): Promise<string> {
-  const abs = join(repoRoot, sourceDocument);
+async function hashSourceDocument(root: string, sourceDocument: string): Promise<string> {
+  const abs = resolveContextPath(sourceDocument, root);
   const text = await readFile(abs, "utf8");
   // hash the body (post-frontmatter), matching inbound source_hash semantics
   const idx = text.indexOf("\n---");

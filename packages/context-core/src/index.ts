@@ -1,5 +1,9 @@
 // @agentic-sales-hub/context-core — the context substrate loader and security boundary.
 
+// Config
+export { resolveContextRoot } from "./config.js";
+export type { AshConfig } from "./config.js";
+
 export { createLoader } from "./loader.js";
 export type { ContextLoader, LoaderOptions } from "./loader.js";
 
@@ -28,6 +32,7 @@ export { readContextFile, toRepoRelative } from "./fs/read.js";
 export { walkContext } from "./fs/walk.js";
 export { assertAppendOnly, frontmatterDelta } from "./fs/append-only.js";
 export type { FrontmatterDelta } from "./fs/append-only.js";
+export { resolveContextPath, toLogicalContextPath } from "./fs/resolve-path.js";
 
 // Scope
 export { resolveScope } from "./scope/resolve.js";

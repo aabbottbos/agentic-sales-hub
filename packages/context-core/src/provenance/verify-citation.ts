@@ -2,8 +2,8 @@ import { classify } from "../frontmatter/classify.js";
 import { parseFrontmatter } from "../frontmatter/parse.js";
 import { resolveCitation } from "./resolve-citation.js";
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
 import { normalizeNewlines } from "../frontmatter/parse.js";
+import { resolveContextPath } from "../fs/resolve-path.js";
 import type { Citation, CitationClaim, CitationVerdict } from "../types.js";
 
 /**
@@ -19,16 +19,16 @@ import type { Citation, CitationClaim, CitationVerdict } from "../types.js";
  * - `kind: "assertion"`: the cited text must contain the claim text
  *   (case-insensitive, whitespace-collapsed) as a substring.
  *
- * `repoRoot` is the directory `context/` sits in.
+ * `root` is the physical corpus root.
  */
 export async function verifyCitation(
   citation: Citation,
   claim: CitationClaim,
-  repoRoot: string,
+  root: string,
 ): Promise<CitationVerdict> {
   let resolved;
   try {
-    resolved = await resolveCitation(citation, repoRoot);
+    resolved = await resolveCitation(citation, root);
   } catch (e) {
     return { valid: false, reason: `citation does not resolve: ${(e as Error).message}` };
   }
@@ -56,7 +56,7 @@ export async function verifyCitation(
     };
   }
 
-  const abs = isAbsolute(citation.path) ? citation.path : join(repoRoot, citation.path);
+  const abs = resolveContextPath(citation.path, root);
   let fm;
   try {
     const raw = normalizeNewlines(await readFile(abs, "utf8"));

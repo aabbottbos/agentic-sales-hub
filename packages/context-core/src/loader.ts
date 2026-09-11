@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { resolveContextRoot } from "./config.js";
 import { loadSchemas } from "./schema/load.js";
 import type { SchemaRegistry } from "./schema/registry.js";
 import { readContextFile, toRepoRelative } from "./fs/read.js";
@@ -31,6 +32,8 @@ import type {
 export interface LoaderOptions {
   /** Directory that `context/` sits in (the repo root, normally). */
   repoRoot: string;
+  /** The context corpus root. When omitted, resolved via `resolveContextRoot()`. */
+  root?: string;
   /** Defaults to `<repoRoot>/context/schema`. */
   schemaDir?: string;
   /** Injectable clock, for deterministic tests. */
@@ -63,13 +66,13 @@ export interface ContextLoader {
 /** Build a context loader rooted at `opts.repoRoot`. */
 export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> {
   const repoRoot = opts.repoRoot;
+  const root = resolveContextRoot({ ...(opts.root ? { root: opts.root } : {}), cwd: repoRoot });
   const schemaDir = opts.schemaDir ?? join(repoRoot, "context/schema");
   const registry = await loadSchemas(schemaDir);
   const ledgerPath = opts.taintLedgerPath ?? join(repoRoot, ".claude/.taint-ledger.jsonl");
   const ledger: TaintLedger = createTaintLedger(ledgerPath);
 
-  const readOne = (path: string): Promise<ContextFile> =>
-    readContextFile(path, { repoRoot, registry });
+  const readOne = (path: string): Promise<ContextFile> => readContextFile(path, { root, registry });
 
   return {
     registry,
@@ -78,12 +81,12 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
 
     readMany: (paths) => Promise.all(paths.map(readOne)),
 
-    list: () => walkContext(repoRoot),
+    list: () => walkContext(root),
 
-    resolveScope: (grants, params) => resolveScope(grants, params, repoRoot),
+    resolveScope: (grants, params) => resolveScope(grants, params, root),
 
     async readScope(grants, params) {
-      const paths = await resolveScope(grants, params, repoRoot);
+      const paths = await resolveScope(grants, params, root);
       // Inbound files inside a resolved scope are read through the quarantine
       // path, not returned as plain ContextFiles here — a skill calls
       // readInbound explicitly for the one document it reviews.
@@ -95,12 +98,12 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
 
     assertValidRetrievalResult: (result) => assertValidRetrievalResult(registry, result),
 
-    resolveCitation: (citation) => resolveCitation(citation, repoRoot),
+    resolveCitation: (citation) => resolveCitation(citation, root),
 
-    verifyCitation: (citation, claim) => verifyCitation(citation, claim, repoRoot),
+    verifyCitation: (citation, claim) => verifyCitation(citation, claim, root),
 
     async readInbound(path) {
-      const repoRel = toRepoRelative(repoRoot, path);
+      const repoRel = toRepoRelative(root, path);
       if (!repoRel.includes("/inbound/")) {
         throw new QuarantineBypassError(`${repoRel} is not an inbound document`);
       }
@@ -117,9 +120,9 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
     isTainted: (value) => ledger.match(value),
 
     writeFindings: (args) =>
-      writeFindings(args, { repoRoot, registry, ...(opts.now ? { now: opts.now } : {}) }),
+      writeFindings(args, { root, registry, ...(opts.now ? { now: opts.now } : {}) }),
 
-    appendOutcome: (args) => appendOutcome(args, { repoRoot, registry }),
+    appendOutcome: (args) => appendOutcome(args, { root, registry }),
   };
 }
 

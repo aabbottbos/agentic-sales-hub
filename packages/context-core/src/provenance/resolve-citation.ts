@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
 import { CitationUnresolvableError } from "../errors.js";
 import { normalizeNewlines } from "../frontmatter/parse.js";
+import { resolveContextPath } from "../fs/resolve-path.js";
 import type { Citation, ResolvedCitation } from "../types.js";
 
 const CONTEXT_CHARS = 200;
@@ -12,12 +12,9 @@ const CONTEXT_CHARS = 200;
  * the file's LF-normalized raw content (frontmatter included — spans are
  * absolute file offsets).
  *
- * `repoRoot` is the directory `context/` sits in.
+ * `root` is the physical corpus root.
  */
-export async function resolveCitation(
-  citation: Citation,
-  repoRoot: string,
-): Promise<ResolvedCitation> {
+export async function resolveCitation(citation: Citation, root: string): Promise<ResolvedCitation> {
   const [start, end] = citation.span;
   if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start) {
     throw new CitationUnresolvableError(
@@ -27,7 +24,7 @@ export async function resolveCitation(
     );
   }
 
-  const abs = isAbsolute(citation.path) ? citation.path : join(repoRoot, citation.path);
+  const abs = resolveContextPath(citation.path, root);
   let raw: string;
   try {
     raw = normalizeNewlines(await readFile(abs, "utf8"));
