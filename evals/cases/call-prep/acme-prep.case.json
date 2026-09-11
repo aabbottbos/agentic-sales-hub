@@ -1,0 +1,10 @@
+{
+  "id": "acme-prep",
+  "skill": "call-prep",
+  "input": {
+    "account_slug": "acme-logistics",
+    "opp_id": "006Ax0000GkLmNpQAA",
+    "meeting_context": "Prep for the 2026-08-05 demo + technical review"
+  },
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" }
+}

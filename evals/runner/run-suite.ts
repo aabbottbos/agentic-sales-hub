@@ -1,6 +1,7 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, cp, mkdtemp, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   createLoader,
   normalizeNewlines,
@@ -24,6 +25,7 @@ import { runInjectionHarness } from "./injection-harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(here, "../..");
+const JUDGE_DIR = join(REPO_ROOT, "evals/judge");
 
 // No CLI flag for this — `evals/runner/cli.ts` doesn't expose a `--root`
 // passthrough. `ASH_CONTEXT_ROOT` is sufficient for overriding the demo
@@ -33,8 +35,8 @@ const CONTEXT_ROOT = resolveContextRoot({
   cwd: REPO_ROOT,
 });
 
-export type SuiteName = "sow-review" | "find-evidence" | "call-summary";
-export const ALL_SUITES: SuiteName[] = ["sow-review", "find-evidence", "call-summary"];
+export type SuiteName = "sow-review" | "find-evidence" | "call-summary" | "call-prep";
+export const ALL_SUITES: SuiteName[] = ["sow-review", "find-evidence", "call-summary", "call-prep"];
 
 interface SowReviewCase {
   id: string;
@@ -60,6 +62,26 @@ interface CallSummaryCase {
   input: { meeting_path: string };
   scope_params: { account_slug?: string; opp_id?: string };
   expected_commitments_ref: string;
+}
+
+interface CallPrepCase {
+  id: string;
+  skill: "call-prep";
+  input: { account_slug: string; opp_id: string; meeting_context?: string };
+  scope_params: { account_slug?: string; opp_id?: string };
+}
+
+// Mirrors packages/skills/src/impl/brief-schema.ts's `BriefOutput` — not
+// exported from @agentic-sales-hub/skills's public surface (only
+// FindEvidenceOutput/SowReviewOutput/SummaryOutput/CallSummaryOutput are), so
+// this is a structurally-equivalent local type for scoring purposes only.
+interface BriefOutputForEval {
+  goal: string;
+  what_we_know: { text: string; citation: { path: string; span: [number, number] } }[];
+  talking_points: { text: string; citation: { path: string; span: [number, number] } }[];
+  risks: { text: string; citation: { path: string; span: [number, number] } }[];
+  citations: { path: string; span: [number, number] }[];
+  unsourced_claims: string[];
 }
 
 export interface CaseResult {
@@ -100,7 +122,24 @@ function toScopeParams(sp: { account_slug?: string; opp_id?: string }): {
 export async function runSuite(suite: SuiteName): Promise<SuiteResult> {
   if (suite === "sow-review") return runReviewSuite();
   if (suite === "find-evidence") return runRetrievalSuite();
-  return runGenerationSuite();
+  if (suite === "call-summary") return runGenerationSuite();
+  return runCallPrepSuite();
+}
+
+/**
+ * Copy `examples/demo-corpus/` into a fresh mkdtemp scratch directory. Used
+ * ONLY by `runCallPrepSuite()` — call-prep's `runSkill` calls
+ * `ctx.loader.writeArtifact()` for real (it has a write grant and
+ * `requires_citations: true`), so it must never run against the committed
+ * corpus. Deliberately a separate, module-local implementation — not an
+ * import of context-core's test-dir `tempCorpus()` helper (evals/ does not
+ * reach across that boundary).
+ */
+async function scratchCorpus(): Promise<{ tmpDir: string; root: string }> {
+  const tmpDir = await mkdtemp(join(tmpdir(), "ash-eval-call-prep-"));
+  const root = join(tmpDir, "demo-corpus");
+  await cp(join(REPO_ROOT, "examples/demo-corpus"), root, { recursive: true });
+  return { tmpDir, root };
 }
 
 async function runReviewSuite(): Promise<SuiteResult> {
@@ -275,6 +314,76 @@ async function runGenerationSuite(): Promise<SuiteResult> {
   }
 
   return aggregateSuite("call-summary", cases);
+}
+
+/**
+ * call-prep is the one generation suite where `runSkill` actually persists —
+ * it has a write grant and `requires_citations: true`, so a citation-valid
+ * run calls `ctx.loader.writeArtifact()` for real (a new artifact file plus
+ * an `outcomes.jsonl` append). Every case therefore runs against its own
+ * `scratchCorpus()` copy, never `examples/demo-corpus/` directly, and the
+ * scratch dir is removed in `finally` even on failure.
+ */
+async function runCallPrepSuite(): Promise<SuiteResult> {
+  const dir = join(CASES_DIR, "call-prep");
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".case.json")).sort();
+  const cases: CaseResult[] = [];
+
+  for (const file of files) {
+    const c = JSON.parse(await readFile(join(dir, file), "utf8")) as CallPrepCase;
+    const { tmpDir, root } = await scratchCorpus();
+    try {
+      const loader = await createLoader({ repoRoot: REPO_ROOT, root });
+      const result = await runSkill(
+        "call-prep",
+        {
+          account_slug: c.input.account_slug,
+          opp_id: c.input.opp_id,
+          ...(c.input.meeting_context ? { meeting_context: c.input.meeting_context } : {}),
+        },
+        { loader, scopeParams: toScopeParams(c.scope_params) },
+      );
+      const output = result.output as BriefOutputForEval;
+
+      const flatForScoring = [
+        ...output.citations,
+        ...output.what_we_know.map((x) => x.citation),
+        ...output.talking_points.map((x) => x.citation),
+        ...output.risks.map((x) => x.citation),
+      ].map((cit) => ({ path: cit.path, span: cit.span, relevance: 1, why: "" }));
+      const citations = await scoreRetrievalCitations(loader, flatForScoring);
+
+      // judge.ts's scoreRubric() reads rubricFile/promptFile as a plain
+      // readFileSync path (not resolved relative to evals/judge/ itself — see
+      // judge.test.ts's own call sites), so these must be joined against
+      // JUDGE_DIR here rather than passed as bare filenames.
+      const rubric = await scoreRubric(output, flatForScoring.map((c) => c.path).join("\n"), {
+        rubricFile: join(JUDGE_DIR, "call-prep-rubric.md"),
+        promptFile: join(JUDGE_DIR, "call-prep-judge-prompt.md"),
+      });
+
+      cases.push({
+        id: c.id,
+        metrics: {
+          rubric_aggregate: round(rubric.aggregate),
+          citation_validity: round(citations.validity),
+        },
+        gates: { citation_validity: citations.validity >= 1 ? "PASS" : "FAIL" },
+        injectionBlocked: null,
+        notes: [
+          `rubric aggregate ${round(rubric.aggregate)} (advisory target 4.0)`,
+          `artifact written to scratch corpus: ${result.artifactPath}`,
+          ...(citations.failures.length
+            ? [`citation failures: ${citations.failures.join("; ")}`]
+            : []),
+        ],
+      });
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  }
+
+  return aggregateSuite("call-prep", cases);
 }
 
 function aggregateSuite(suite: SuiteName, cases: CaseResult[]): SuiteResult {
