@@ -20,6 +20,7 @@ let loader: ContextLoader;
 beforeAll(async () => {
   loader = await createLoader({
     repoRoot,
+    root: join(repoRoot, "examples/demo-corpus"),
     taintLedgerPath: join(here, "../../../.claude/.taint-ledger.test.jsonl"),
   });
 });

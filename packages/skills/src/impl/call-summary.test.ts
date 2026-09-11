@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
+import {
+  createLoader,
+  resolveContextPath,
+  type ContextLoader,
+} from "@agentic-sales-hub/context-core";
 import { complete, type CompleteArgs } from "./llm.js";
 import { validateSummaryOutput, type SummaryOutput } from "./summary-schema.js";
 import { buildSystemPrompt, buildUserPrompt } from "./call-summary.prompt.js";
@@ -97,12 +101,14 @@ describe("call-summary prompts", () => {
 describe("call-summary impl (stubbed model)", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const repoRoot = join(here, "../../../..");
+  const contextRoot = join(repoRoot, "examples/demo-corpus");
   const OPP = "006Ax0000GkLmNpQAA";
   let loader: ContextLoader;
 
   beforeAll(async () => {
     loader = await createLoader({
       repoRoot,
+      root: contextRoot,
       taintLedgerPath: join(repoRoot, ".claude/.taint-ledger.test.jsonl"),
     });
   });
@@ -112,7 +118,10 @@ describe("call-summary impl (stubbed model)", () => {
   });
 
   it("computes citation spans from the model's verbatim quotes", async () => {
-    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
     const quote = "send Midwest Freight case study";
     const stub = JSON.stringify({
       summary: "Discovery call with Acme Logistics about a single exception queue.",
@@ -145,7 +154,10 @@ describe("call-summary impl (stubbed model)", () => {
   });
 
   it("gives an unlocatable quote an out-of-range span (fails the citation gate, no crash)", async () => {
-    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
     const stub = JSON.stringify({
       summary: "x",
       commitments: [],
@@ -167,7 +179,10 @@ describe("call-summary impl (stubbed model)", () => {
   });
 
   it("passes the whole LF-normalized file as the note text", async () => {
-    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
     const stub = JSON.stringify({
       summary: "x",
       commitments: [],
@@ -206,7 +221,10 @@ describe("call-summary impl (stubbed model)", () => {
   });
 
   it("recovers when an early model response is unparseable but a later one is valid", async () => {
-    const raw = (await readFile(join(repoRoot, DISCOVERY_NOTE), "utf8")).replace(/\r\n/g, "\n");
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
     const quote = "ONE exception queue";
     const good = JSON.stringify({
       summary: "Acme wants one exception queue.",

@@ -72,7 +72,11 @@ describe("quarantine-inbound hook", () => {
   beforeAll(async () => {
     // ingest the SOW redline so the taint ledger has its shingles
     await rm(ledgerPath, { force: true });
-    const loader = await createLoader({ repoRoot, taintLedgerPath: ledgerPath });
+    const loader = await createLoader({
+      repoRoot,
+      root: join(repoRoot, "examples/demo-corpus"),
+      taintLedgerPath: ledgerPath,
+    });
     await loader.readInbound(sowRedline);
   });
   afterAll(async () => {
