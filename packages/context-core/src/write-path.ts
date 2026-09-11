@@ -1,10 +1,9 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { existsSync } from "node:fs";
 import { assertAppendOnly } from "./fs/append-only.js";
 import { validateAgainst } from "./schema/validate.js";
 import type { SchemaRegistry } from "./schema/registry.js";
-import { AppendOnlyViolationError, SchemaValidationError } from "./errors.js";
+import { AppendOnlyViolationError, ScopeViolationError, SchemaValidationError } from "./errors.js";
 import { SCHEMA_VERSION } from "./schema/registry.js";
 import { resolveContextPath } from "./fs/resolve-path.js";
 import { appendOutcome } from "./outcomes/append-outcome.js";
@@ -17,6 +16,22 @@ export interface WriteArtifactDeps {
 }
 
 const MAX_MINT_ATTEMPTS = 8;
+
+/** Rejects a slug/id containing a path separator, `..`, or a leading dot —
+ *  accountSlug/crmId are interpolated directly into a filesystem path, and
+ *  resolveContextPath's underlying path.join collapses `..` segments, so an
+ *  unvalidated value here is a directory-escape write primitive. */
+function assertSafePathSegment(value: string, label: string): void {
+  if (
+    value === "" ||
+    value === "." ||
+    value === ".." ||
+    /[\\/]/.test(value) ||
+    value.includes("..")
+  ) {
+    throw new ScopeViolationError(value, `${label} is not a safe path segment`);
+  }
+}
 
 /**
  * Persist a generation skill's structured output as a new `kind: <kind>`
@@ -38,6 +53,9 @@ export async function writeArtifact(
   args: WriteArtifactArgs,
   deps: WriteArtifactDeps,
 ): Promise<WriteArtifactResult> {
+  assertSafePathSegment(args.accountSlug, "accountSlug");
+  assertSafePathSegment(args.crmId, "crmId");
+
   const now = deps.now ? deps.now() : new Date();
   const oppDir = `context/accounts/${args.accountSlug}/opportunities/${args.crmId}`;
   const artifactsDir = `${oppDir}/artifacts`;
@@ -56,13 +74,14 @@ export async function writeArtifact(
     const artifactId = args.artifactId ?? (await mintNextId(deps.root, artifactsDir));
     const relPath = `${artifactsDir}/${artifactId}-${args.kind}.md`;
 
-    const frontmatter = buildFrontmatter({ ...args, artifactId, created: now.toISOString() });
+    const renderArgs: RenderArgs = { ...args, artifactId, created: now.toISOString() };
+    const frontmatter = buildFrontmatter(renderArgs);
     const res = validateAgainst(deps.registry, "artifact", frontmatter);
     if (!res.valid) throw new SchemaValidationError(relPath, "artifact", res.issues);
 
     assertAppendOnly(relPath, "create");
     const absPath = resolveContextPath(relPath, deps.root);
-    const content = renderArtifact({ ...args, artifactId, created: now.toISOString() });
+    const content = renderArtifact(renderArgs, frontmatter);
 
     try {
       await mkdir(dirname(absPath), { recursive: true });
@@ -120,13 +139,13 @@ async function mintNextId(root: string, artifactsDirLogical: string): Promise<st
   return `a-${String(max + 1).padStart(4, "0")}`;
 }
 
-/** Presence-check only. Returns {valid:true} unconditionally when no template
- *  file exists. Enforcement logic (parsing required sections out of the
- *  template, checking the rendered body against them) is WI-5. */
+/** Presence-check placeholder only — always {valid:true}. An org output
+ *  template (context/org/templates/<kind>.md) is not yet enforced against
+ *  the rendered body either way; that logic is WI-5 (spec 004 OQ5). Keeps its
+ *  (root, kind) signature so the call site needs no change when WI-5 lands. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature intentionally kept for WI-5
 function checkOutputTemplate(root: string, kind: string): { valid: boolean; errors: string[] } {
-  const templatePath = resolveContextPath(`context/org/templates/${kind}.md`, root);
-  if (!existsSync(templatePath)) return { valid: true, errors: [] };
-  return { valid: true, errors: [] }; // template exists but is not yet enforced — WI-5
+  return { valid: true, errors: [] };
 }
 
 interface RenderArgs extends WriteArtifactArgs {
@@ -150,8 +169,7 @@ function buildFrontmatter(a: RenderArgs): Record<string, unknown> {
   };
 }
 
-function renderArtifact(a: RenderArgs): string {
-  const fm = buildFrontmatter(a);
+function renderArtifact(a: RenderArgs, fm: Record<string, unknown>): string {
   const lines = [
     "---",
     `fictional: ${fm.fictional}`,

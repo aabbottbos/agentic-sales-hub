@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from "vitest";
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -8,7 +8,7 @@ import type { SchemaRegistry } from "./schema/registry.js";
 import { readContextFile } from "./fs/read.js";
 import { resolveContextPath } from "./fs/resolve-path.js";
 import { writeArtifact } from "./write-path.js";
-import { AppendOnlyViolationError, SchemaValidationError } from "./errors.js";
+import { AppendOnlyViolationError, ScopeViolationError, SchemaValidationError } from "./errors.js";
 import type { ArtifactCitationInput } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -192,6 +192,104 @@ describe("writeArtifact", () => {
       );
       const ids = results.map((r) => r.artifactId);
       expect(new Set(ids).size).toBe(5);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts existing valid slugs unchanged (acme-logistics / 006Ax0000GkLmNpQAA)", async () => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      const { artifactPath } = await writeArtifact(
+        {
+          accountSlug: "acme-logistics",
+          crmId: "006Ax0000GkLmNpQAA",
+          kind: "brief",
+          generatedBy: "call-prep",
+          title: "Valid slug happy path",
+          body: "Body.",
+          citations: [citation],
+        },
+        { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
+      );
+      expect(artifactPath).toBe(
+        "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0001-brief.md",
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a path-traversal accountSlug before any filesystem write happens", async () => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      await expect(
+        writeArtifact(
+          {
+            accountSlug: "../../../etc",
+            crmId: OPP,
+            kind: "brief",
+            generatedBy: "call-prep",
+            title: "Malicious slug",
+            body: "Body.",
+            citations: [citation],
+          },
+          { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
+        ),
+      ).rejects.toBeInstanceOf(ScopeViolationError);
+
+      // the escape target was never created, and the fixture corpus tree is untouched
+      const etcDir = join(tmpDir, "etc");
+      await expect(readdir(etcDir)).rejects.toMatchObject({ code: "ENOENT" });
+      const accountsDir = await readdir(join(root, "accounts"));
+      expect(accountsDir).toEqual(["fix-co"]);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a crmId containing a `..` segment", async () => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      await expect(
+        writeArtifact(
+          {
+            accountSlug: "fix-co",
+            crmId: "../../etc",
+            kind: "brief",
+            generatedBy: "call-prep",
+            title: "Malicious crmId",
+            body: "Body.",
+            citations: [citation],
+          },
+          { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
+        ),
+      ).rejects.toBeInstanceOf(ScopeViolationError);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["accountSlug", "fix/co"],
+    ["accountSlug", "fix\\co"],
+    ["crmId", "006A/x000"],
+    ["crmId", "006A\\x000"],
+  ])("rejects a %s containing a separator character (%s)", async (field, badValue) => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      const args = {
+        accountSlug: field === "accountSlug" ? badValue : "fix-co",
+        crmId: field === "crmId" ? badValue : OPP,
+        kind: "brief",
+        generatedBy: "call-prep",
+        title: "Malicious separator",
+        body: "Body.",
+        citations: [citation],
+      };
+      await expect(
+        writeArtifact(args, { root, registry, now: () => new Date("2026-09-18T12:00:00Z") }),
+      ).rejects.toBeInstanceOf(ScopeViolationError);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
