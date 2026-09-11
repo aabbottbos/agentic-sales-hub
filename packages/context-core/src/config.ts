@@ -8,11 +8,6 @@ export interface AshConfig {
   compile?: { skillOverridesMaxChars: number };
 }
 
-export const DEFAULT_ASH_CONFIG: AshConfig = {
-  contextRoot: "./context",
-  compile: { skillOverridesMaxChars: 2000 },
-};
-
 /**
  * Reads `ash.config.json` at `cwd` and returns its `contextRoot` field, if present and a
  * string. Missing file, malformed JSON, or a missing/non-string `contextRoot` all fall
