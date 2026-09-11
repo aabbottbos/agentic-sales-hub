@@ -63,11 +63,14 @@ describe("scoreRubric", () => {
   });
 
   it("ignores an unparseable attempt but uses the good ones", async () => {
+    // attempts: 2 — the loop stops once it has 2 good scores. With `attempts: 3`
+    // it would keep calling past these three canned responses (by design: see
+    // judge.ts's `maxCalls = attempts + 2`), which the mock chain isn't sized for.
     vi.spyOn(llm, "complete")
       .mockResolvedValueOnce("garbage")
       .mockResolvedValueOnce('{"grounding":4,"completeness":4,"tone":4,"structure":4}')
       .mockResolvedValueOnce('{"grounding":4,"completeness":4,"tone":4,"structure":4}');
-    const r = await scoreRubric(OUT, "n", { attempts: 3 });
+    const r = await scoreRubric(OUT, "n", { attempts: 2 });
     expect(r.aggregate).toBe(4);
     expect(r.attempts).toHaveLength(2);
   });

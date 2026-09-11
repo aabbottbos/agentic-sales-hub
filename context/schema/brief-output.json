@@ -31,8 +31,12 @@
         "quote": { "type": "string", "minLength": 1 },
         "span": {
           "type": "array",
-          "prefixItems": [{ "type": "integer", "minimum": 0 }, { "type": "integer", "minimum": 0 }],
-          "minItems": 2, "maxItems": 2
+          "prefixItems": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
         }
       },
       "required": ["path", "quote", "span"],
