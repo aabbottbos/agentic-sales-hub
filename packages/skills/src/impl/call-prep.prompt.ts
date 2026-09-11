@@ -81,16 +81,32 @@ export function buildUserPrompt(
     );
   }
 
-  lines.push(
-    "Every citation quote must be an exact substring of the text inside one of the",
-    "file blocks below (frontmatter included), between that file's BEGIN and END",
-    "markers. Each block's path line gives you the exact path string to use in",
-    "citations for that block.",
-    "",
-  );
+  if (contextFiles.length === 0) {
+    lines.push(
+      "No source documents were provided for this opportunity. There is nothing to cite:",
+      "what_we_know, talking_points, risks, and citations must all be empty arrays, and any",
+      "claim you would otherwise want to make must instead go in unsourced_claims (or be",
+      "omitted). Do not invent or assume file content.",
+      "",
+    );
+  } else {
+    lines.push(
+      "Every citation quote must be an exact substring of the text inside one of the",
+      "file blocks below (frontmatter included), between that file's BEGIN and END",
+      "markers. Each block's path line gives you the exact path string to use in",
+      "citations for that block.",
+      "",
+    );
 
-  for (const file of contextFiles) {
-    lines.push(`<<<FILE: ${file.path}>>>`, file.raw, "<<<END FILE>>>", "");
+    // The <<<FILE: path>>> / <<<END FILE>>> markers are plain text, not escaped against
+    // file content that might contain similar-looking text. That's intentional, not an
+    // oversight: call-prep's grant excludes inbound/** (no adversarial content is ever in
+    // scope here), and resolveCitationSpan independently re-verifies every quote is a
+    // genuine verbatim substring of the CLAIMED file — a misattributed path just fails to
+    // resolve rather than silently succeeding. Escaping would add brittleness for no gain.
+    for (const file of contextFiles) {
+      lines.push(`<<<FILE: ${file.path}>>>`, file.raw, "<<<END FILE>>>", "");
+    }
   }
 
   lines.push("Return the JSON object now.");
