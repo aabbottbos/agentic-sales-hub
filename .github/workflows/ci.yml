@@ -50,6 +50,9 @@ jobs:
       - name: No real data
         run: pnpm check:no-real-data
 
+      - name: Context root is empty
+        run: pnpm check:context-empty
+
   gitleaks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
