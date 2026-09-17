@@ -1,10 +1,66 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-11** (WI-2 / intent 004 — `call-prep` + the write path
-— **shipped**, this branch. `docs/AgenticSalesHub_NorthStar_v1.md` landed
-2026-09-11 — governs all three other docs, not yet committed. Next: WI-3,
-intent 005 — `proposal-draft` — see "The North Star" section below).
+Last updated: **2026-09-17** (Intent 005 — team steel thread — intent, spec,
+and plan all committed; implementation starting. WI-2 / intent 004
+(`call-prep` + the write path) **shipped to `main`** via PR #21 — merged into
+this branch. Intent 005 inserts ahead of WI-3 (`proposal-draft`) in the work
+chain — see "Intent 005" section below).
+
+## Intent 005 — team steel thread (spec + plan committed, implementation starting)
+
+**Why this exists:** a same-day pivot from single-seller to team/org support
+(see `TEAM FOCUS.md`, uncommitted, at repo root — onboarding acceleration,
+manager deal support, trend analysis, CS/Product handoff, and a concrete
+background-agent case: auto-coaching after every discovery call). Rather than
+build out the remaining single-seller skills (`proposal-draft`, corpus
+expansion) and discover team-support gaps later, the call was to prove a thin
+**steel thread** first: actor identity, safe concurrent writes, and one real
+automatic trigger, end-to-end, before adding more skills to a still-single-
+seller architecture.
+
+**Scope (tier:2 — schema change + new package + new background-execution
+surface):**
+- Actor identity added to `artifact.json` / `outcome.json` schemas and the
+  `WriteArtifactArgs` / `AppendOutcomeArgs` type surface.
+- Single-process mutex/queue serializing `writeArtifact()` / `appendOutcome()`
+  against the same opportunity (not distributed/multi-machine git locking —
+  explicitly deferred).
+- New `packages/mcp-agentic-sales-hub` — one MCP tool wrapping `runSkill()`
+  for `call-summary`, a second for `call-prep` (both already-built,
+  already-eval-gated skills; no new skill authored).
+- A file watcher, running **inside** the MCP server process, on
+  `inbound/**` → fires `call-summary` automatically, no human action,
+  attributed to a fixed sentinel actor (e.g. `system:file-watcher`).
+- Explicitly out of scope: RBAC, cross-org grants, trend-analysis rollups,
+  CS/Product read surfaces, any real third-party trigger integration
+  (Gong/Zoom/webhooks), skill chaining (`call-summary → call-prep`).
+
+**Filed:** `docs/intent/005-team-steel-thread.md` (issue
+[#22](https://github.com/aabbottbos/agentic-sales-hub/issues/22)),
+`docs/specs/005-team-steel-thread.md`, and `docs/plans/005-team-steel-thread.md`
+— all committed on `intent/005-team-steel-thread`.
+
+**Resolved during spec/plan:**
+1. Actor field shape — typed `{type: "human"|"system", id: string}`, required
+   (not optional) on `artifact.json`/`outcome.json`. Existing corpus records
+   backfilled with a legacy sentinel actor (plan Task 2), no grandfather
+   clause on `schema_version` skew.
+2. Corpus expansion (§10) stays a separate, later work item — not folded into
+   this spec's WI-4 scope.
+3. Sequencing vs. WI-3 (`proposal-draft`): 005 ships first — prove the steel
+   thread with `call-summary` + `call-prep` before starting `proposal-draft`.
+4. `appendOutcome`'s missing write-guard: no standalone fix — the
+   per-opportunity mutex/queue this spec builds subsumes it, proven by a
+   concurrency test (plan Task 6), not a separate small fix.
+5. A real gap found during plan design: `call-summary.yaml`'s read grant
+   (`meetings/**` only) can't reach `inbound/**`, which the watcher needs.
+   Resolved by widening the grant + a path-shape branch in the impl (plan
+   Task 5) — a small, additive amendment to spec 005's Skill contract
+   section, not a full contract rewrite.
+
+**Next action:** execute the plan's Task 0 (sync this branch with
+`origin/main` — done, this merge) then Task 1 onward.
 
 ## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
 
@@ -58,6 +114,12 @@ context spec, commit history). The repo today is all proof layer — closing
 that gap (README rewrite, demo video) is itself in-scope work, likely riding
 on WI-5's README rewrite rather than a separate item.
 
+**Not yet reconciled with intent 005:** the North Star's five-skills-plus-
+compounding-loop framing predates today's team-focus pivot. Team support
+(multi-user, background execution) isn't named in the North Star's deltas
+above — flag this gap when the North Star is next revised, so the document
+and the WI chain don't silently diverge.
+
 ## Where we are
 
 **Phase 0 (Context Substrate + Eval Harness) is done and merged to `main`**
@@ -70,7 +132,8 @@ on WI-5's README rewrite rather than a separate item.
 own context, and gets useful output without rework — and reshapes the roadmap
 into a strict dependency chain: **WI-0 → WI-1 → WI-2 → WI-3 → WI-4 → WI-5**, each
 its own intent → spec → plan → PR. Intent 002 (`call-summary`) is explicitly
-carved out and proceeds in parallel.
+carved out and proceeds in parallel. Intent 005 (this session) now inserts
+into that chain ahead of WI-3 — see "The work chain" below.
 
 **WI-0 (rename to Agentic Sales Hub) is done and merged** (`5942c0d`, PR #9).
 `deal-desk`/`DEAL_DESK_*`/`DealDesk*` → `agentic-sales-hub`/`ASH_*`/`AshError`
@@ -79,36 +142,25 @@ Amendment §3. Env var `DEAL_DESK_TAINT_LEDGER` → `ASH_TAINT_LEDGER` landed in
 both the quarantine hook and the injection harness (`injection: PASS` confirms).
 Schema `$id` base is now `https://agentic-sales-hub.dev/schema/`.
 
-**Phase 1 is in progress** — intent 002 **merged** (PR #10, squash `a78e2d0`);
-spec 002 **cold-reviewed and approved** (comment on PR #11, `c7c8540`) — one
-edit: OQ5 resolved plan-avoids-`SCHEMA_TYPES` (generation branch validates the
-raw `summary-output.json` file, no `context-core` change). **PR #11 is ready to
-merge** (`spec/002-call-summary-generation-path`); after merge → fresh branch off
-`main` → plan mode → `docs/plans/002-…`. See the last section.
+- `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green (verified this session on a fresh clone check; the only local failure encountered was `.obsidian/` tripping Prettier, fixed via `.gitignore` on `intent/004-call-prep-write-path`, commit `b0d3cb5` — **not yet on `main`**, carried by WI-2's branch).
+- `pnpm eval --suite all` — all gates pass as of the last committed result on `main` (`evals/results/2026-09-11-f82c7a7.json`); WI-2's branch has its own newer calibration runs, not yet merged.
+- `pnpm corpus:validate` / `pnpm check:no-real-data` — clean.
 
-- `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green.
-- **122 unit tests pass.**
-- `pnpm eval --suite all` — all gates pass:
-  - `sow-review` blocker_recall **1.0**, precision **1.0**, citation_validity **1.0**
-  - `find-evidence` recall **1.0**, citation_validity **1.0**
-  - injection case: quarantine hook blocks the induced write (`injection: PASS`)
-- `pnpm corpus:validate` — 28 files, 0 errors. `pnpm check:no-real-data` — OK.
-- First eval result committed: `evals/results/2026-09-07-434b594.json`.
-
-All six intent success criteria are met.
+All six Phase 0 intent success criteria are met.
 
 ## What's built (and where)
 
 | Area | Path | State |
 |---|---|---|
-| Context loader / security boundary | `packages/context-core/` | done — 92 tests. `createLoader()` is the entrypoint (`src/loader.ts`). |
-| Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12). `context/schema/README.md` is the path→schema table. |
-| Synthetic corpus | `examples/demo-corpus/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. Moved from `context/` by WI-1 (`git mv`, history preserved); `context/` now holds only `schema/`, `templates/`, `.gitkeep`. |
-| Skills | `packages/skills/` | done — `find-evidence` + `sow-review`, **deterministic** (ADR `docs/decisions/0001`). YAML defs in `src/definitions/`, impls in `src/impl/`, `runSkill` in `src/runner.ts`. |
-| Eval harness | `evals/` | done — scorers, cases, `runner/cli.ts` (`pnpm eval`), `runner/injection-harness.ts`. |
+| Context loader / security boundary | `packages/context-core/` | done — `createLoader()` is the entrypoint (`src/loader.ts`). `writeArtifact()`/`appendOutcome()` on `main` today lack actor identity and (for `appendOutcome`) any collision guard — intent 005's target. |
+| Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12) on `main`; `brief-output.json` lands with WI-2. `context/schema/README.md` is the path→schema table. |
+| Synthetic corpus | `examples/demo-corpus/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. |
+| Skills | `packages/skills/` | `find-evidence` + `sow-review` deterministic (ADR `docs/decisions/0001`); `call-summary` LLM-backed, merged. `call-prep` LLM-backed, implementation-complete on WI-2's branch, not yet merged. |
+| Eval harness | `evals/` | done on `main` for the merged skills; WI-2's branch adds `runCallPrepSuite()` (mutates a scratch corpus copy, not `examples/demo-corpus/` directly). |
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
-| CI | `.github/workflows/` | done — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`. Verified working on PR #2. |
+| CI | `.github/workflows/` | done — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`. |
 | Review policy | `REVIEW.md`, `.github/pull_request_template.md`, `.github/CODEOWNERS` | done |
+| MCP server | `packages/mcp-agentic-sales-hub` | **not started** — no `@modelcontextprotocol/sdk` dependency exists yet. Target of intent 005 (steel-thread scope) and WI-4 (full scope). |
 
 ## Key mechanics to know
 
@@ -118,54 +170,29 @@ All six intent success criteria are met.
   `inbound/**`.
 - **The quarantine hook** (`.claude/hooks/quarantine-inbound.ts`) reads
   `.claude/.taint-ledger.jsonl` (or `$ASH_TAINT_LEDGER`) and blocks any
-  Write/Edit/Bash whose arg text matches an ingested inbound doc. The eval
-  injection-harness sets `ASH_TAINT_LEDGER` to
-  `.claude/.taint-ledger.eval.jsonl` so the hook sees the ledger the harness
-  populated. Both ledger files are gitignored (`.claude/.taint-ledger*.jsonl`).
-- **`sow-review` matcher**: whitespace-normalizes the extracted inbound body
-  (redlines wrap mid-phrase), compiles each clause's `unacceptable_patterns` as
-  `RegExp(p, "i")`, maps match offsets back to raw body offsets, and emits one
-  Finding per distinct clause+locator (highest severity wins).
+  Write/Edit/Bash whose arg text matches an ingested inbound doc.
 - **Canonical opportunity id shape**: Salesforce-style 18-char,
   `^006[A-Za-z0-9]{12}[A-Z]{3}$` — the corpus uses `006Ax0000GkLmNpQAA`. The dir
   name must equal `crm_id`; `corpus:validate` cross-checks.
 - **`.claude/skills/<id>/SKILL.md` is generated** from the YAML definitions by
   `pnpm skills:sync`. CI runs `pnpm skills:sync:check` — a drift fails the build.
-  Do not hand-edit those two SKILL.md files (`write-intent` / `write-spec` are
-  hand-authored and untouched).
+- **`writeArtifact()` mints artifact ids via `flag: "wx"`** (collision-safe by
+  construction); **`appendOutcome()`'s `appendFile` has no equivalent guard**
+  — discovered during intent 005's investigation, not yet fixed (see open
+  question 4 above). Neither function does anything at the git layer (no
+  commit, no lock) — two processes writing to the same opportunity today can
+  interleave. This is the concrete gap intent 005 closes for the single-server
+  case.
+- **`resolveContextRoot()` precedence**: `opts.root` → `ASH_CONTEXT_ROOT` →
+  `ash.config.json` `contextRoot` → `./context`. An empty `context/` is valid.
 
 ## Deviations from the spec (already accepted; flag if revisiting)
 
 - **D5 — deterministic skills** in Phase 0, not LLM-backed. ADR `docs/decisions/0001`.
-  Phase 1 swaps an LLM-backed impl into `packages/skills/src/impl/` behind the
-  same contract. Spec 002 resolves the how: `@anthropic-ai/sdk` direct behind a
-  single seam function (`impl/llm.ts`), **not** the Agent SDK — model portability
-  is an explicit v1 non-goal.
 - `finding.json` `suggested_redline` required for blocker/major, optional for minor.
 - `find-evidence` read grant excludes `outcomes.jsonl`.
 - Node `engines` allows 24+ for local dev; `.nvmrc` + CI pin 22.
 - `docs/intent/` is singular (repo convention); the SDLC doc says `docs/intents/`.
-
-## Done since Phase 0
-
-- **Intent 002 — call-summary generation path** (PR #10, squash `a78e2d0`).
-  tier:2 intent committed; issue #7 is the Phase 1 umbrella. Spec follow-up is
-  PR #11 (open).
-- **WI-0 — rename to Agentic Sales Hub** (PR #9, squash `5942c0d`). Mechanical,
-  T0. See "Where we are" above for the details. `rg -i "deal.?desk"` now hits
-  only the two exempt decision-record docs.
-- **Branch protection on `main`** — ruleset active: require PR, require `verify` +
-  `gitleaks`, block force-push, linear history. Direct pushes to `main` are
-  rejected (confirmed — the `PR-LOOP.md` commit itself bounced and went via PR #3).
-- **Labels** — `tier:0/1/2`, `intent`, `agent-ready`, `overnight`,
-  `eval-regression`, `human-only` all created.
-- **`PR-LOOP.md`** — step-by-step for taking a change through the loop (PR #3).
-- **`evals/golden/README.md` + `corpus.lock.json`** — added via PR #5, plus
-  `evals/runner/lock-corpus.ts` and `pnpm eval:lock` (regenerates the lock;
-  28 files). That PR also fixed a real `evals.yml` bug: `pnpm eval --json > file`
-  captured pnpm's lifecycle banner and broke `JSON.parse`; `cli.ts` now has
-  `--json-out <path>` and the workflow uses it. **The eval comparison comment
-  posts correctly on PRs** (verified on #5).
 
 ## Open follow-ups
 
@@ -174,46 +201,48 @@ All six intent success criteria are met.
 2. **Blocking decisions before the first outside clone** (amendment §12): repo
    public-from-day-one (v2 open decision #1) and the license (#2). Needed before
    WI-5.
-3. **HANDOFF vs. amendment numbering** — resolved: the amendment's WI chain
-   (intent 003–007) is authoritative. Intent 002 (`call-summary`) shipped
-   separately (PR #13). WI-1 / intent 003 (tenancy seam) shipped PR #17.
-   WI-2 / intent 004 (`call-prep` + the write path) shipped this branch.
-   Next up: **WI-3 / intent 005** — `proposal-draft`.
+3. **HANDOFF vs. amendment numbering** — the amendment's WI chain (intent
+   003–007) is authoritative, now reordered by intent 005 — see "The work
+   chain" below.
 4. **North Star not yet committed** — `docs/AgenticSalesHub_NorthStar_v1.md`
    is on disk, untracked. Commit it (plain T0 docs commit) before or alongside
-   the next WI so it's governing in-repo, not just on disk.
-5. **The compounding loop has no intent number yet.** North Star §10 names it
+   the next WI so it's governing in-repo, not just on disk. Also needs
+   reconciling with intent 005's team-focus pivot (see North Star section
+   above).
+5. **`TEAM FOCUS.md` not yet committed** — on disk at repo root, untracked.
+   The source document for intent 005's pivot. Commit it alongside the North
+   Star, or fold its content into the North Star directly, so the team-focus
+   rationale is governing in-repo rather than a loose file.
+6. **The compounding loop has no intent number yet.** North Star §10 names it
    as a new work item (outcome-weighted retrieval + evidence reuse rate as a
-   gated metric) but doesn't slot it into the WI-2..WI-5 chain. Needs a
-   decision: its own WI between WI-3 and WI-4, or folded into WI-4 alongside
-   the corpus-expansion closed-deal requirement (#6 below) since reuse rate
-   needs that same corpus data to compute anything.
-6. **WI-4's intent (006, not yet written) must carry the closed-deal
+   gated metric) but doesn't slot it into the WI chain, and doesn't yet
+   account for intent 005 either.
+7. **WI-4's intent (006, not yet written) must carry the closed-deal
    requirement**: ≥2 of the added opportunities close (won/lost) with
-   artifacts + `outcomes.jsonl` populated, not just more meeting notes. Flag
-   this at intent-writing time, not spec time — it changes the corpus design.
-7. **Two-layer packaging / demo video** — not scoped as a WI yet. Likely rides
-   on WI-5's README rewrite ("adoption path first") plus a standalone demo
-   video, needed before October per the North Star's sequencing inversion
-   (§7). Worth a T1 plan of its own once WI-4 is in flight, so it isn't a
-   December scramble.
-8. **Blocking generation-quality gate — deliberately deferred, not closed**
+   artifacts + `outcomes.jsonl` populated, not just more meeting notes. May
+   also absorb or be reshaped by intent 005's MCP-server scope — resolve at
+   intent-005-spec time (open question 2).
+8. **Two-layer packaging / demo video** — not scoped as a WI yet. Likely rides
+   on WI-5's README rewrite plus a standalone demo video, needed before
+   October per the North Star's sequencing inversion (§7).
+9. **Blocking generation-quality gate — deliberately deferred, not closed**
    (spec 004 Judgment call #6, ratified at spec review 2026-09-11). Both
-   `call-summary` (intent 002 amendment A1) and now `call-prep` **(shipped
-   this branch — WI-2 done, so this premise now holds doubly: two generation
-   skills, still zero blocking quality gates)** ship with only citation
-   validity as a blocking gate; the rubric (≥ 4.0/5 target) and any
-   recall-style scorer are advisory/tracked only, because the same-judge-
-   judging-same-family-output noise A1 documented made a blocking rubric
-   unreliable. Revisit once either a stabler judge setup exists (more
-   attempts + a calibrated threshold, an ensemble, or a non-token-overlap
-   claim matcher) or the golden set is large enough that one case can't
-   dominate the aggregate. Not itself a WI yet — surface at `proposal-draft`
-   (WI-3 / intent 005) planning time, since a third generation skill is
-   exactly when "no generation skill has ever had a blocking quality gate"
-   becomes harder to defend as still provisional.
+   `call-summary` and `call-prep` ship (or will ship, on merge) with only
+   citation validity as a blocking gate; the rubric is advisory/tracked only.
+   Revisit once either a stabler judge setup exists or the golden set is
+   large enough that one case can't dominate the aggregate. Flagged for
+   `proposal-draft` (WI-3) planning time — still applies now that WI-3 sits
+   behind intent 005 in the chain.
+10. **WI-2's branch (`intent/004-call-prep-write-path`) is implementation-
+    complete but not yet merged to `main`.** All 15 plan tasks done, eval
+    calibration run 3x, citation validity 1.00 every run. Needs a PR opened
+    and merged before intent 005's spec work can safely assume `writeArtifact()`
+    exists on `main` — intent 005's mutex/serialization task wraps
+    `writeArtifact()`, which only exists post-WI-2. **Recommend merging WI-2
+    before starting intent 005's spec**, even though 005 now precedes WI-3 in
+    priority — the dependency is on WI-2's code, not WI-3's.
 
-## The work chain (amendment §6–§11)
+## The work chain (amendment §6–§11, reordered by intent 005)
 
 Strict dependency order. Each WI is its own committed intent → spec → plan → PR.
 **Never weaken an eval gate to make a WI pass.**
@@ -222,12 +251,22 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 |---|---|---|---|---|
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
-| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (this branch) |
-| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 005 | not started |
-| **WI-4** | `packages/mcp-agentic-sales-hub` + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 006 | not started |
-| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 007 | not started |
+| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **implementation-complete, not merged** (branch `intent/004-call-prep-write-path`) |
+| **Team steel thread** | Actor identity; single-process write serialization; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **intent filed** (issue #22), spec not started. Inserted ahead of WI-3 this session — depends on WI-2 merging first (see follow-up #10). |
+| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 006 (renumbered from 005) | not started |
+| **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 007 (renumbered from 006) | not started — scope may shrink or merge with intent 005, per open question 2 |
+| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 008 (renumbered from 007) | not started |
 
-**WI-1 must land before WI-4** or the MCP server bakes in a hardcoded context root.
+**Note on renumbering:** intent doc numbers are assigned at filing time and
+are not renumbered after the fact (005 is permanently "team steel thread").
+The **intent column above reflects that** — WI-3/4/5's doc numbers shift down
+by one from what earlier HANDOFF revisions said, since 005 was claimed today.
+Confirm actual intent numbers against `docs/intent/` before writing new specs;
+this table is a planning aid, not the source of truth for filenames.
+
+**WI-1 must land before WI-4/steel-thread** — done, satisfied. **WI-2 must
+land before the steel thread's spec work begins** — not yet satisfied, see
+follow-up #10.
 
 ### Shared contracts to read before touching any WI (amendment §5)
 
@@ -247,178 +286,89 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 ## Intent 002 — call-summary — SHIPPED (PR #13, `b135b08`)
 
 The first LLM-backed generation skill. All 15 plan tasks done; intent + spec +
-plan + impl all merged to `main`. Issue #7 stays open as the Phase-1 umbrella
-(`call-prep`, `proposal-draft`, MCP server still to come).
+plan + impl all merged to `main`. Issue #7 stays open as the Phase-1 umbrella.
 
 **Key outcomes:**
 - `SkillImpl` seam held — `skill-def.schema.json`, `runSkill` signature, and
-  `packages/context-core` all unchanged (`git diff` was empty for each at merge).
+  `packages/context-core` all unchanged at merge.
 - `packages/skills/src/impl/{llm,summary-schema,call-summary,call-summary.prompt}.ts`
   — `@anthropic-ai/sdk ~0.124.0` behind the one `complete()` seam.
-- `context/schema/summary-output.json` — output-contract schema, auto-discovered
-  by `loadSchemas`, validated in-package (no `SCHEMA_TYPES` / `context-core` change).
+- `context/schema/summary-output.json` — output-contract schema.
 - `evals/scorers/generation.ts` + `evals/judge/` + `runGenerationSuite()`.
 
 **Ratified spec amendments (docs/specs/002 §"Build-stage amendments"):**
-- **A1** — for `call-summary` v1, `citation_validity = 1.00` is the ONE hard
-  blocking gate (deterministic, resolve-only, stable every run).
-  `rubric_aggregate` (single `claude-sonnet-5` judge swings 2.5–4.25 on identical
-  input) and `commitment_recall` (token-overlap can't bridge a valid paraphrase)
-  are ADVISORY — computed, printed with targets, regression-tracked-by-hand only
-  (dropped from `compare.ts` PRIMARY so they don't trigger build-failing
-  regressions). Revises OQ2 + the generation eval class.
+- **A1** — `citation_validity = 1.00` is the ONE hard blocking gate for
+  `call-summary` v1. `rubric_aggregate` and `commitment_recall` are ADVISORY —
+  a single judge is too noisy, token-overlap recall too literal. See
+  `evals/judge/README.md` + spec 002 amendment A1.
 - **A2** — a citation is `{path, quote, span}`: the model returns a verbatim
-  `quote`, the skill computes `span` (claude-sonnet-5 cannot produce char
-  offsets). Resolves OQ7. `quote` is required in the schema + `SummaryOutput` type.
-
-**Other build-forced fixes** (all merged): `complete()` sends no `temperature`
-(deprecated on `claude-sonnet-5`) and passes `thinking: { type: "disabled" }` (the
-model otherwise returns no text); it retries transient API errors (429/5xx) 2×;
-`call-summary.ts` retries the whole generate→parse→validate cycle 3× (one flaky
-generation must not fail the suite); `scoreRubric` degrades to `unavailable`
-instead of throwing; `resolveCitationSpan` has a 4-tier quote matcher;
-`evals.yml` compare step no-ops when `pnpm eval` produced no report.
+  `quote`, the skill computes `span`.
 
 **`ANTHROPIC_API_KEY` is set as a repo secret** (Actions). Locally it lives in
-`.anthropic-key` (gitignored) or `.env.local` (also gitignored, via `.env.*`) —
-before any `pnpm eval` hitting `--suite call-summary` or `all`:
-- **The key must be workspace-scoped.** A key not bound to a workspace gets
-  `400: This API key is not scoped to a workspace...` from every `call-summary`
-  request. Generate one at console.anthropic.com → Settings → API Keys.
-- **`source .anthropic-key` doesn't work inside a git-worktree-isolated
-  session** — the harness blocks `source`/`export` there (can't statically
-  verify the sourced content isn't a git command). Use
-  `pnpm exec tsx --env-file=.anthropic-key evals/runner/cli.ts --suite all --write-results`
-  instead (Node 22+'s native `--env-file`, threaded through `tsx`). Outside a
-  worktree, `source .anthropic-key && pnpm eval --suite all` still works fine.
+`.anthropic-key` (gitignored) or `.env.local` (also gitignored). Must be
+workspace-scoped. `source .anthropic-key` doesn't work inside a git-worktree-
+isolated session — use
+`pnpm exec tsx --env-file=.anthropic-key evals/runner/cli.ts --suite all --write-results`
+instead.
 
 Baseline eval result: `evals/results/2026-09-10-0932036.json` (call-summary
 pre-WI-1). WI-1's post-move baseline: `evals/results/2026-09-11-f82c7a7.json`
-(all suites, `regression_verdict: PASS`).
+(all suites, `regression_verdict: PASS`) — **this is the latest result
+committed on `main`.**
 
 ## WI-1 — tenancy seam — SHIPPED (PR #17, `d6c6329`)
 
 Makes the context root configurable and moves the demo corpus out of `context/`.
-Intent + spec + plan (`docs/intent/003`, `docs/specs/003`, `docs/plans/003`)
-merged first as PR #16 (Design gate, cold-reviewed); implementation followed as
-PR #17 via `superpowers:subagent-driven-development` — 9 sequenced tasks, each
-with independent spec-compliance + code-quality review.
 
 **Key outcomes:**
-- `packages/context-core/src/config.ts` — `resolveContextRoot(opts?: { root?,
-  cwd? })`, sync, precedence `opts.root` → `ASH_CONTEXT_ROOT` → `ash.config.json`
-  `contextRoot` → `./context`. `AshConfig` fully typed (`contextRoot`,
-  `org.slug`, `compile.skillOverridesMaxChars`) though only `contextRoot` is
-  read — WI-5 owns the rest.
+- `packages/context-core/src/config.ts` — `resolveContextRoot(opts?)`,
+  precedence `opts.root` → `ASH_CONTEXT_ROOT` → `ash.config.json`
+  `contextRoot` → `./context`.
 - `packages/context-core/src/fs/resolve-path.ts` — `resolveContextPath()` /
-  `toLogicalContextPath()`, the one shared logical-`context/...`-to-physical
-  helper every corpus-path-resolving function now goes through. Throws
-  `ScopeViolationError` (not a plain `Error`) on a malformed logical path.
-- `createLoader()` gains optional `{ root }`. The parameter several functions
-  called `repoRoot` (`resolveScope`, `walkContext`, `resolveCitation`,
-  `verifyCitation`, `readContextFile`, `validateCorpus`, `writeFindings`,
-  `appendOutcome`) is renamed to `root` — it always meant corpus root, never
-  repo root; `repoRoot` stays required on `createLoader` itself and still
-  governs `schemaDir`/`taintLedgerPath` (genuinely repo-relative, unaffected).
+  `toLogicalContextPath()`, the shared logical-to-physical path helper.
+  Throws `ScopeViolationError` on a malformed logical path.
 - `git mv context/{org,demand-gen,legal,accounts} → examples/demo-corpus/`.
-  `context/` now holds only `schema/` (unmoved — schema is repo-relative, not
-  corpus-relative), `templates/` (new, empty, WI-5 fills it), `.gitkeep`.
-  History preserved (`git log --follow`); `corpus.lock.json` regenerated,
-  byte-identical hashes, unchanged logical keys.
-- `corpus:validate` / `check:no-real-data` / `eval:lock` / the eval runner all
-  default to `examples/demo-corpus`, accept `--root`/`ASH_CONTEXT_ROOT`,
-  verified (adversarially, via a poisoned `ash.config.json`) to never fall
-  through to it when no override is given.
-- New `pnpm check:context-empty` — blocking CI guard, allowlist
-  `{schema, templates, .gitkeep}` at the top level of `context/` only (shallow,
-  not recursive).
-- `.claude/hooks/protect-paths.ts` + `.claude/settings.json` protect **both**
-  `context/**` and `examples/demo-corpus/**` (belt-and-braces during the
-  transition — spec judgement call #4).
-- No skill YAML, eval-case path, or citation-path string touched anywhere —
-  `pnpm skills:sync:check` shows no drift. The load-bearing design call (spec
-  judgement call #1: `context/` is a logical prefix the loader rewrites to the
-  physical root at resolution time, not a root-relative-grants rewrite) held
-  through the full implementation with zero skill-contract churn.
-
-**Five Important-severity findings from review, fixed before merge:** an
-unused `DEFAULT_ASH_CONFIG` constant; a plain `Error` in `resolveContextPath`
-that should have been (and now is) `ScopeViolationError`; a false-positive-green
-gap in `corpus:validate`'s CLI (a stale `--root`/positional arg silently
-reporting "OK" on 0 files checked instead of flagging it); a missing
-`checkContextEmpty` export from `index.ts`'s public barrel; and (this session,
-not a code review finding) the eval run itself needing a workspace-scoped API
-key — see the `ANTHROPIC_API_KEY` note above.
+  History preserved; `corpus.lock.json` regenerated, byte-identical hashes.
+- New `pnpm check:context-empty` — blocking CI guard.
+- `.claude/hooks/protect-paths.ts` protects both `context/**` and
+  `examples/demo-corpus/**`.
 
 **Deviation from the spec's explicit function list (not a defect, a scope
 correction):** `findings/write-findings.ts`, `outcomes/append-outcome.ts`, and
-one direct read in `evals/runner/run-suite.ts` (the rubric judge's raw
-meeting-note text) weren't named in the spec's "functions to touch" list but
-had the identical bug — they built a logical `context/...` string internally
-and joined it straight onto `repoRoot`. Left alone, findings/outcomes writes
-would have silently landed in the emptied `context/` tree instead of
-`examples/demo-corpus/`, a latent bug WI-2 would have inherited. Fixed in the
-same PR; flagged during plan-mode exploration, not discovered late.
+one direct read in `evals/runner/run-suite.ts` had the identical `repoRoot`
+bug as the spec's named functions. Fixed in the same PR.
 
-## WI-2 — call-prep + the write path — SHIPPED (this branch, intent/spec/plan 004)
+## WI-2 — call-prep + the write path — IMPLEMENTATION COMPLETE, NOT MERGED
+
+Branch `intent/004-call-prep-write-path`. All 15 plan tasks done; intent doc
+merged to `main` (PR #20, `d1bb307`) but **the implementation PR is still
+open** — see follow-up #10 above for why this blocks intent 005's spec work.
 
 The second LLM-backed generation skill, and the first skill with a write
 grant — `writeArtifact()` persists its output as a new artifact and opens an
-`unused` outcome record automatically, closing the deferral `call-summary`
-(intent 002) left open ("a separate step (WI-2) persists it").
+`unused` outcome record automatically.
 
-**Key outcomes:**
+**Key outcomes (on the branch, pending merge):**
 - `packages/skills/src/impl/{brief-schema,call-prep,call-prep.prompt}.ts` —
-  wide read grant (beyond the opportunity's own scope: `context/org/**` for
-  offerings/evidence, `context/demand-gen/**` for ICP material), model call
-  behind the same `impl/llm.ts` seam `call-summary` uses, brief-output
-  validation, 3x retry on the generate→parse→validate cycle.
+  wide read grant (`context/org/**`, `context/demand-gen/**` beyond the
+  opportunity's own scope), same `impl/llm.ts` seam as `call-summary`.
 - `context/schema/brief-output.json` — output-contract schema for
   `goal` / `what_we_know` / `talking_points` / `risks`, each entry carrying a
-  resolvable citation; unsourced claims collected separately, never asserted.
+  resolvable citation.
 - `packages/context-core/src/types.ts` gains **additive-only** exports —
   `ArtifactCitationInput`, `WriteArtifactArgs`, `WriteArtifactResult` — for
-  the new `writeArtifact()` write path. Unlike intent 002's zero-diff claim,
-  this one **did** touch `context-core`, deliberately: `writeArtifact()` is
-  the write-side counterpart to `writeFindings()`/`appendOutcome()`, mints
-  the artifact id, validates against the kind's output schema (+ a no-op
-  template check — `checkOutputTemplate()` looks for
-  `context/org/templates/<kind>.md` and returns `{valid: true}` when absent;
-  WI-5 fills in the body, not the call site), and opens the `unused` outcome
-  record. `skill-def.schema.json` and `runSkill`'s signature are unchanged
-  (`git diff main -- packages/skills/src/skill-def.schema.json` is empty) —
-  the seam claim holds for the skill-authoring contract, just not for
-  `context-core`'s type surface.
+  `writeArtifact()`. This is the function intent 005's serialization task
+  wraps.
 - `runSkill` hardened: a write-grant skill with `requires_citations: true`
-  now has that invariant enforced at the runner, not just by convention.
-  Citation-flattening (`flattenCitations`) generalized so any skill's
-  per-field citation shape (not just `call-summary`'s flat `citations[]`)
-  feeds `writeArtifact()`'s frontmatter.
-- `evals/judge/judge.ts`'s `scoreRubric` generalized to take an explicit
-  `{rubricFile, promptFile}` pair (default: the original `call-summary`
-  files, zero behavior change at that existing call site) —
-  `evals/judge/call-prep-rubric.md` + `call-prep-judge-prompt.md` are
-  `call-prep`'s own rubric/prompt.
-- `evals/runner/run-suite.ts`'s `runCallPrepSuite()` — the one eval suite
-  that mutates for real. `call-prep` has a write grant, so a citation-valid
-  run calls `writeArtifact()` against a fresh `mkdtemp` + `cp` scratch copy
-  of `examples/demo-corpus/`, never the committed corpus directly; the
-  scratch dir is removed in `finally` even on failure (spec 004 JC9).
-  `evals/cases/call-prep/acme-prep.case.json` is the one golden case —
-  citation validity (blocking) + rubric (advisory) are the two metrics; no
-  deterministic recall scorer ships this slice.
+  now has that invariant enforced at the runner.
+- `evals/runner/run-suite.ts`'s `runCallPrepSuite()` — mutates a fresh
+  `mkdtemp` + `cp` scratch copy of `examples/demo-corpus/`, never the
+  committed corpus directly.
 
-**Ratified spec amendment (spec 004 Judgment call #6, extending intent 002
-amendment A1 to a second generation skill):** `citation_validity = 1.00` is
-the one hard blocking gate for `call-prep`; `rubric_aggregate` is advisory,
-same rationale as A1 — see `evals/judge/README.md`'s "call-prep judge"
-section. 3 live calibration runs: judge parsed every time, citation validity
-1.00 every run, `rubric_aggregate` 2.50–4.00 (consistent with `call-summary`'s
-already-documented judge noise, not a new problem). A generated brief read
-manually against `a-0001-brief.md`: well-grounded, correctly structured, its
-one synthesized claim correctly flagged `[unsourced]`.
+**Ratified spec amendment (spec 004 Judgment call #6):** `citation_validity
+= 1.00` is the one hard blocking gate for `call-prep`; `rubric_aggregate` is
+advisory, same rationale as A1. 3 live calibration runs: citation validity
+1.00 every run.
 
-**Seam claim, stated precisely (see the deviation above):**
-`packages/skills/src/skill-def.schema.json` — unchanged. `runSkill`'s
-exported signature — unchanged. `packages/context-core/src/types.ts` —
-additive-only (3 new exported interfaces, nothing removed or narrowed).
+**Next action on this branch:** open a PR, get it merged to `main`, before
+intent 005's spec/plan work assumes `writeArtifact()` is present on `main`.
