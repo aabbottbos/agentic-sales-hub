@@ -57,10 +57,22 @@ intent 004's shipped shape.
 
 ## Skill contract
 
-No skill is added or its contract changed, per the intent's explicit
-constraint. `call-summary.yaml` and (once it exists — see JC #1) a
-`call-prep.yaml` are consumed unmodified. What *is* new is the layer above
-`runSkill`:
+No skill is added, and neither skill's `inputs`/`output` contract changes,
+per the intent's explicit constraint. `call-prep.yaml` is consumed
+unmodified. **Amendment (found during plan design, 2026-09-17):**
+`call-summary.yaml`'s read grant is `context/accounts/*/opportunities/*/meetings/**`
+only, and its impl reads via `ctx.loader.read()`, not `readInbound()` — as
+shipped (intent 002), it has no way to process an `inbound/**` file at all.
+This spec's watcher needs it to. Resolution: `call-summary.yaml`'s read
+grant widens to also include `context/accounts/*/opportunities/*/inbound/**`,
+and the impl gains a path-shape branch (`meeting_path` under `/inbound/`)
+that calls `ctx.loader.readInbound()` + `extractUntrusted()` instead of
+`ctx.loader.read()`. `CallSummaryInput` stays `{meeting_path: string}` —
+unchanged shape. This is a small, additive grant widening, not a rewrite of
+`call-summary`'s inputs/output contract — the "no contract change" invariant
+this section otherwise holds to is about not adding `actor` (or any other
+new required field) to a skill's declared `inputs`, not about read grants
+never widening. What *is* new besides this is the layer above `runSkill`:
 
 - **`packages/mcp-agentic-sales-hub`** exposes two MCP tools,
   `skill.call-summary` and `skill.call-prep`, each taking the skill's
