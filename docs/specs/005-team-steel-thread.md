@@ -19,10 +19,13 @@ thread is proven through the two MCP tools the spec adds — one wrapping
 `call-summary`, one wrapping `call-prep` — with no new skill authored and no
 contract change to either skill's definition YAML.
 
-**This spec surfaces one hard blocker before any of the above can be built:
-`call-prep` and `writeArtifact()` do not exist.** See Judgment call #1 — the
-plan cannot proceed against intent 005 as scoped until this is resolved with
-the user, and doing so is out of this spec's authority.
+**This spec surfaced one hard blocker before any of the above could be built:
+`call-prep` and `writeArtifact()` did not exist.** See Judgment call #1 —
+**resolved 2026-09-17: intent 004 (`call-prep` + the write path) merged to
+`main` via PR #21.** `writeArtifact()`, `call-prep.ts`/`.yaml`, and the
+`call-prep` eval case are now on `main`; option (a) from JC #1's
+recommendation is the path taken. This spec can proceed to plan mode against
+intent 004's shipped shape.
 
 ## Context model impact
 
@@ -183,26 +186,17 @@ constraint. `call-summary.yaml` and (once it exists — see JC #1) a
 
 ## Judgment calls for review
 
-1. **Sequencing blocker: `call-prep` and `writeArtifact()` do not exist.**
-   Confirmed against the repo (no `call-prep.ts`/`.yaml`, no
-   `write-artifact.ts` anywhere in `packages/`) and against git history
-   (intent 004 has only its intent doc committed — no spec, no plan, no
-   code, on `main` or any other branch). Intent 005 states the thread is
-   proven "using two already-built, already-eval-gated skills (`call-summary`,
-   `call-prep`)" and describes `WriteArtifactArgs` as an existing type to
-   modify. Neither is true today. This spec cannot resolve the conflict
-   itself — the intent's own open question 3 already flags the sequencing
-   question against WI-3 but not against WI-4/002's dependency on WI-2
-   (intent 004) landing first. **This needs a decision before plan mode:**
-   either (a) intent 004 (writeArtifact/call-prep) ships first as its own
-   T2 change and 005 is re-scoped to depend on it, or (b) 005's scope drops
-   to `call-summary` only (the one skill that *is* built) and "prove the
-   thread with two skills" is relaxed to one, with `call-prep` wired in
-   later once WI-2 lands. Recommendation: (a) — the intent's own "who it
-   affects" section already lists `WriteArtifactArgs`/`AppendOutcomeArgs`
-   as pre-existing, which reads as though 004 was assumed shipped when 005
-   was written. I did not pick for you; the plan stage should not start
-   until this is answered.
+1. **Sequencing blocker: `call-prep` and `writeArtifact()` do not exist. —
+   RESOLVED 2026-09-17.** At spec-drafting time, neither existed anywhere on
+   `main` or any branch, contradicting intent 005's assumption that both were
+   already built. Option (a) from this call's recommendation was taken:
+   intent 004 (`call-prep` + the write path) shipped as its own T2 change —
+   spec, plan, and code — and merged to `main` via PR #21. `writeArtifact()`,
+   `call-prep.ts`/`.yaml`, `context/schema/brief-output.json`, and the
+   `call-prep` eval case are now present on `main`; `WriteArtifactArgs`/
+   `ArtifactCitationInput` in `packages/context-core/src/types.ts` are the
+   real, shipped shapes this spec's JC #2 and §"Skill contract" build
+   against. No further sequencing decision is needed before plan mode.
 2. **`actor` required, not optional, on `artifact.json`/`outcome.json`.**
    The intent's OQ1 asks about the field's *shape* (string vs. typed) and
    this spec resolves that (typed `{type, id}`, matching the sentinel
@@ -247,25 +241,28 @@ constraint. `call-summary.yaml` and (once it exists — see JC #1) a
 
 Carried from the intent, plus new ones this spec surfaces:
 
-1. **(Blocking — see JC #1)** Does 005 wait on intent 004 shipping first,
-   or does 005's scope shrink to `call-summary`-only for this thread?
-2. **(New, from JC #2)** Backfill existing corpus `artifact`/`outcome`
-   records with a legacy sentinel actor, or grandfather pre-bump
-   `schema_version` records to not require `actor`?
-3. Does this work item replace WI-4 (`packages/mcp-agentic-sales-hub` + §10
-   corpus expansion) outright, or does corpus expansion stay a separate,
-   later work item? (Intent OQ2 — unresolved here; this spec only commits
-   to building the package, not to closing WI-4's full scope.)
-4. Where does this land relative to WI-3 (`proposal-draft`)? (Intent OQ3 —
-   unresolved; noted that JC #1's blocker makes this moot until resolved,
-   since 005 itself may now be blocked on 004.)
-5. Does `appendOutcome`'s missing write-guard get fixed as part of this
-   spec's mutex/serialization work, or does it land first as its own
-   smaller fix? (Intent OQ4.) This spec's position: the mutex/queue this
-   spec adds *subsumes* the need for a `flag: "wx"`-equivalent on
-   `appendOutcome` — once writes are serialized per-opportunity through the
-   queue, the collision this OQ worries about can't occur, so a separate
-   guard is redundant if the queue ships first. Flagged as a position, not
-   a decision, since "does the queue actually close this" is exactly what
-   the concurrency test (Eval impact) must prove before this OQ can be
-   marked resolved.
+1. **(Resolved — see JC #1)** Intent 004 shipped to `main` 2026-09-17 (PR
+   #21); 005 proceeds against both skills as originally scoped.
+2. **(Resolved, from JC #2)** Backfill. Existing corpus `artifact`/`outcome`
+   records get a one-time migration writing a legacy sentinel actor
+   (`{type: "system", id: "legacy"}`) onto every pre-existing record, rather
+   than a grandfather clause on `schema_version`. `actor` stays
+   unconditionally required in both schemas with no version-skew carve-out —
+   the plan stage scopes the migration script/step alongside the
+   `context/schema/artifact.json` and `outcome.json` MINOR bump.
+3. **(Resolved)** Corpus expansion stays a separate, later work item.
+   `packages/mcp-agentic-sales-hub` (this spec) does not fold in §10 corpus
+   expansion — WI-4's full scope is not closed by 005; corpus expansion is
+   tracked on its own, after this thread ships. (Intent OQ2.)
+4. **(Resolved)** 005 is higher priority than WI-3 (`proposal-draft`): prove
+   the steel thread — identity, concurrent writes, background trigger —
+   through the two already-existing skills (`call-summary`, `call-prep`)
+   before starting `proposal-draft`. WI-3 sequences after this spec ships.
+   (Intent OQ3.)
+5. **(Resolved)** No standalone fix. `appendOutcome`'s missing write-guard
+   does not get its own small fix — this spec's position stands: the
+   per-`(accountSlug, crmId)` mutex/queue it builds subsumes the need for a
+   `flag: "wx"`-equivalent, since serialized writes through the queue can't
+   collide. The plan stage must include the concurrency test (Eval impact,
+   above) as the proof obligation that the queue actually closes this gap
+   before treating it as closed. (Intent OQ4.)
