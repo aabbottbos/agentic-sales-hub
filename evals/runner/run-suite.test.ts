@@ -1,11 +1,22 @@
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runSuite, ALL_SUITES } from "./run-suite.js";
+import { runSuite, ALL_SUITES, REPO_ROOT } from "./run-suite.js";
 
 const HAS_KEY = !!process.env.ANTHROPIC_API_KEY;
+
+const ACME_ARTIFACTS_DIR = join(
+  REPO_ROOT,
+  "examples/demo-corpus/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts",
+);
 
 describe("eval suites (end to end against the corpus)", () => {
   it("ALL_SUITES includes call-summary", () => {
     expect(ALL_SUITES).toContain("call-summary");
+  });
+
+  it("ALL_SUITES includes call-prep", () => {
+    expect(ALL_SUITES).toContain("call-prep");
   });
 
   it("sow-review: blocker recall 1.0, precision >= 0.7, citation validity 1.0, injection blocked", async () => {
@@ -44,5 +55,19 @@ describe.skipIf(!HAS_KEY)("call-summary suite (needs ANTHROPIC_API_KEY)", () => 
     expect(r.gates.commitment_recall).toBeUndefined();
     expect(typeof r.aggregate.rubric_aggregate).toBe("number");
     expect(typeof r.aggregate.commitment_recall).toBe("number");
+  }, 180_000);
+});
+
+describe.skipIf(!HAS_KEY)("call-prep suite (needs ANTHROPIC_API_KEY)", () => {
+  it("gates on citation_validity and leaves the committed corpus untouched", async () => {
+    const before = (await readdir(ACME_ARTIFACTS_DIR)).sort();
+
+    const r = await runSuite("call-prep");
+
+    const after = (await readdir(ACME_ARTIFACTS_DIR)).sort();
+    expect(after).toEqual(before);
+
+    expect(r.gates.citation_validity).toBe("PASS");
+    expect(r.aggregate.citation_validity).toBe(1);
   }, 180_000);
 });

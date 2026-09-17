@@ -15,6 +15,7 @@ import { sha256 } from "./quarantine/hash.js";
 import { normalizeNewlines } from "./frontmatter/parse.js";
 import { writeFindings } from "./findings/write-findings.js";
 import { appendOutcome } from "./outcomes/append-outcome.js";
+import { writeArtifact } from "./write-path.js";
 import { QuarantineBypassError } from "./errors.js";
 import type {
   AppendOutcomeArgs,
@@ -26,6 +27,8 @@ import type {
   ResolvedCitation,
   RetrievalHit,
   TaintMatch,
+  WriteArtifactArgs,
+  WriteArtifactResult,
   WriteFindingsArgs,
 } from "./types.js";
 
@@ -61,6 +64,7 @@ export interface ContextLoader {
   isTainted(value: string): Promise<TaintMatch | null>;
   writeFindings(args: WriteFindingsArgs): Promise<{ artifactPath: string }>;
   appendOutcome(args: AppendOutcomeArgs): Promise<{ outcomesPath: string }>;
+  writeArtifact(args: WriteArtifactArgs): Promise<WriteArtifactResult>;
 }
 
 /** Build a context loader rooted at `opts.repoRoot`. */
@@ -123,6 +127,9 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
       writeFindings(args, { root, registry, ...(opts.now ? { now: opts.now } : {}) }),
 
     appendOutcome: (args) => appendOutcome(args, { root, registry }),
+
+    writeArtifact: (args) =>
+      writeArtifact(args, { root, registry, ...(opts.now ? { now: opts.now } : {}) }),
   };
 }
 

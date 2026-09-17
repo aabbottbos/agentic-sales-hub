@@ -10,6 +10,7 @@ const PRIMARY: Record<string, string[]> = {
   "sow-review": ["blocker_recall", "precision", "citation_validity"],
   "find-evidence": ["recall", "citation_validity"],
   "call-summary": ["citation_validity"],
+  "call-prep": ["citation_validity"],
 };
 
 export interface Comparison {

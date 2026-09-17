@@ -1,8 +1,62 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-11** (WI-1 / intent 003 tenancy seam **shipped** — PR #17
-merged to `main`, `d6c6329`. Next: WI-2, intent 004 — `call-prep` + the write path).
+Last updated: **2026-09-11** (WI-2 / intent 004 — `call-prep` + the write path
+— **shipped**, this branch. `docs/AgenticSalesHub_NorthStar_v1.md` landed
+2026-09-11 — governs all three other docs, not yet committed. Next: WI-3,
+intent 005 — `proposal-draft` — see "The North Star" section below).
+
+## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
+
+Governs `Spec_v2.md`, the Adoptability Amendment, and the SDLC Framework —
+when a scope question can't be settled in a spec, it's settled here. Not yet
+`git add`ed; do that in a normal commit when convenient, no rush.
+
+**Thesis:** sales work should compound because the context substrate — not
+the CRM — is the system of record; augmenting existing skills with real org
+context doesn't just improve them, it makes new skills possible that weren't
+viable before. **Priority order:** (1) a Director+ role — judge everything
+else by whether it serves this, (2) the open-source repo as proof-of-earned-
+thesis, (3) a managed service, explicitly **deferred, not dead** (trigger:
+three outside orgs running it on their own context ask to be hosted).
+
+**Scope resolution — org-wide in the writing, seller-deep in the build.** The
+writeup covers the whole revenue org; the working system proves one slice
+(the deal spine, five skills + setup skill + the compounding loop) to
+evaluated depth. Deferred-by-name in the writing: pipeline inspection (the
+strongest candidate — same structured-findings contract as `sow-review`,
+first thing after the job search closes), SOW generation, CS handoff, lead
+gen/enrichment, dashboards, CRM integration.
+
+**Sequencing inversion — the writeup moves ahead of the build.** This
+supersedes Spec v2 §11's Phase 3 placement. Target: publish the thesis
+document + a ≤5-min demo video in October, on top of a 60%-built system,
+ahead of interview season (Oct–Nov). The build plan (WI chain below) keeps
+running underneath it, not blocked by it.
+
+**Three concrete deltas this creates for the amendment/roadmap** (§10):
+1. **New work item — the compounding loop.** Outcome-weighted retrieval
+   extending `find-evidence`, plus **evidence reuse rate** as a scored, gated
+   metric (the primary "did compounding actually happen" number). Not yet
+   assigned a WI slot or intent number — needs its own intent before WI-4/WI-5
+   land, since reuse rate needs the corpus requirement below to measure
+   anything.
+2. **WI-4 (corpus expansion) gains a hard requirement**: at least two of the
+   added opportunities must close (won or lost) with artifacts and
+   `outcomes.jsonl` records populated — not just more meeting notes. Update
+   intent 006 to carry this before it's written.
+3. **Non-negotiable eval gates are unchanged** (blocker recall 1.00, citation
+   validity 1.00, retrieval recall ≥ 0.90, generation rubric ≥ 4.0/5, no net
+   regression) — the North Star treats these as the proof layer, not in
+   tension with the business goal. Decision rule: never weaken a gate to hit
+   a deadline.
+
+**Two-layer packaging is a design constraint, not a nice-to-have** — a VP of
+Sales must follow the demo in 5 minutes (revenue language, deal outcomes, a
+number); a technical evaluator verifies it's real in 20 (evals, provenance,
+context spec, commit history). The repo today is all proof layer — closing
+that gap (README rewrite, demo video) is itself in-scope work, likely riding
+on WI-5's README rewrite rather than a separate item.
 
 ## Where we are
 
@@ -123,7 +177,41 @@ All six intent success criteria are met.
 3. **HANDOFF vs. amendment numbering** — resolved: the amendment's WI chain
    (intent 003–007) is authoritative. Intent 002 (`call-summary`) shipped
    separately (PR #13). WI-1 / intent 003 (tenancy seam) shipped PR #17.
-   Next up: **WI-2 / intent 004** — `call-prep` + the write path.
+   WI-2 / intent 004 (`call-prep` + the write path) shipped this branch.
+   Next up: **WI-3 / intent 005** — `proposal-draft`.
+4. **North Star not yet committed** — `docs/AgenticSalesHub_NorthStar_v1.md`
+   is on disk, untracked. Commit it (plain T0 docs commit) before or alongside
+   the next WI so it's governing in-repo, not just on disk.
+5. **The compounding loop has no intent number yet.** North Star §10 names it
+   as a new work item (outcome-weighted retrieval + evidence reuse rate as a
+   gated metric) but doesn't slot it into the WI-2..WI-5 chain. Needs a
+   decision: its own WI between WI-3 and WI-4, or folded into WI-4 alongside
+   the corpus-expansion closed-deal requirement (#6 below) since reuse rate
+   needs that same corpus data to compute anything.
+6. **WI-4's intent (006, not yet written) must carry the closed-deal
+   requirement**: ≥2 of the added opportunities close (won/lost) with
+   artifacts + `outcomes.jsonl` populated, not just more meeting notes. Flag
+   this at intent-writing time, not spec time — it changes the corpus design.
+7. **Two-layer packaging / demo video** — not scoped as a WI yet. Likely rides
+   on WI-5's README rewrite ("adoption path first") plus a standalone demo
+   video, needed before October per the North Star's sequencing inversion
+   (§7). Worth a T1 plan of its own once WI-4 is in flight, so it isn't a
+   December scramble.
+8. **Blocking generation-quality gate — deliberately deferred, not closed**
+   (spec 004 Judgment call #6, ratified at spec review 2026-09-11). Both
+   `call-summary` (intent 002 amendment A1) and now `call-prep` **(shipped
+   this branch — WI-2 done, so this premise now holds doubly: two generation
+   skills, still zero blocking quality gates)** ship with only citation
+   validity as a blocking gate; the rubric (≥ 4.0/5 target) and any
+   recall-style scorer are advisory/tracked only, because the same-judge-
+   judging-same-family-output noise A1 documented made a blocking rubric
+   unreliable. Revisit once either a stabler judge setup exists (more
+   attempts + a calibrated threshold, an ensemble, or a non-token-overlap
+   claim matcher) or the golden set is large enough that one case can't
+   dominate the aggregate. Not itself a WI yet — surface at `proposal-draft`
+   (WI-3 / intent 005) planning time, since a third generation skill is
+   exactly when "no generation skill has ever had a blocking quality gate"
+   becomes harder to defend as still provisional.
 
 ## The work chain (amendment §6–§11)
 
@@ -134,7 +222,7 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 |---|---|---|---|---|
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
-| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | not started |
+| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (this branch) |
 | **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 005 | not started |
 | **WI-4** | `packages/mcp-agentic-sales-hub` + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 006 | not started |
 | **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 007 | not started |
@@ -271,3 +359,66 @@ and joined it straight onto `repoRoot`. Left alone, findings/outcomes writes
 would have silently landed in the emptied `context/` tree instead of
 `examples/demo-corpus/`, a latent bug WI-2 would have inherited. Fixed in the
 same PR; flagged during plan-mode exploration, not discovered late.
+
+## WI-2 — call-prep + the write path — SHIPPED (this branch, intent/spec/plan 004)
+
+The second LLM-backed generation skill, and the first skill with a write
+grant — `writeArtifact()` persists its output as a new artifact and opens an
+`unused` outcome record automatically, closing the deferral `call-summary`
+(intent 002) left open ("a separate step (WI-2) persists it").
+
+**Key outcomes:**
+- `packages/skills/src/impl/{brief-schema,call-prep,call-prep.prompt}.ts` —
+  wide read grant (beyond the opportunity's own scope: `context/org/**` for
+  offerings/evidence, `context/demand-gen/**` for ICP material), model call
+  behind the same `impl/llm.ts` seam `call-summary` uses, brief-output
+  validation, 3x retry on the generate→parse→validate cycle.
+- `context/schema/brief-output.json` — output-contract schema for
+  `goal` / `what_we_know` / `talking_points` / `risks`, each entry carrying a
+  resolvable citation; unsourced claims collected separately, never asserted.
+- `packages/context-core/src/types.ts` gains **additive-only** exports —
+  `ArtifactCitationInput`, `WriteArtifactArgs`, `WriteArtifactResult` — for
+  the new `writeArtifact()` write path. Unlike intent 002's zero-diff claim,
+  this one **did** touch `context-core`, deliberately: `writeArtifact()` is
+  the write-side counterpart to `writeFindings()`/`appendOutcome()`, mints
+  the artifact id, validates against the kind's output schema (+ a no-op
+  template check — `checkOutputTemplate()` looks for
+  `context/org/templates/<kind>.md` and returns `{valid: true}` when absent;
+  WI-5 fills in the body, not the call site), and opens the `unused` outcome
+  record. `skill-def.schema.json` and `runSkill`'s signature are unchanged
+  (`git diff main -- packages/skills/src/skill-def.schema.json` is empty) —
+  the seam claim holds for the skill-authoring contract, just not for
+  `context-core`'s type surface.
+- `runSkill` hardened: a write-grant skill with `requires_citations: true`
+  now has that invariant enforced at the runner, not just by convention.
+  Citation-flattening (`flattenCitations`) generalized so any skill's
+  per-field citation shape (not just `call-summary`'s flat `citations[]`)
+  feeds `writeArtifact()`'s frontmatter.
+- `evals/judge/judge.ts`'s `scoreRubric` generalized to take an explicit
+  `{rubricFile, promptFile}` pair (default: the original `call-summary`
+  files, zero behavior change at that existing call site) —
+  `evals/judge/call-prep-rubric.md` + `call-prep-judge-prompt.md` are
+  `call-prep`'s own rubric/prompt.
+- `evals/runner/run-suite.ts`'s `runCallPrepSuite()` — the one eval suite
+  that mutates for real. `call-prep` has a write grant, so a citation-valid
+  run calls `writeArtifact()` against a fresh `mkdtemp` + `cp` scratch copy
+  of `examples/demo-corpus/`, never the committed corpus directly; the
+  scratch dir is removed in `finally` even on failure (spec 004 JC9).
+  `evals/cases/call-prep/acme-prep.case.json` is the one golden case —
+  citation validity (blocking) + rubric (advisory) are the two metrics; no
+  deterministic recall scorer ships this slice.
+
+**Ratified spec amendment (spec 004 Judgment call #6, extending intent 002
+amendment A1 to a second generation skill):** `citation_validity = 1.00` is
+the one hard blocking gate for `call-prep`; `rubric_aggregate` is advisory,
+same rationale as A1 — see `evals/judge/README.md`'s "call-prep judge"
+section. 3 live calibration runs: judge parsed every time, citation validity
+1.00 every run, `rubric_aggregate` 2.50–4.00 (consistent with `call-summary`'s
+already-documented judge noise, not a new problem). A generated brief read
+manually against `a-0001-brief.md`: well-grounded, correctly structured, its
+one synthesized claim correctly flagged `[unsourced]`.
+
+**Seam claim, stated precisely (see the deviation above):**
+`packages/skills/src/skill-def.schema.json` — unchanged. `runSkill`'s
+exported signature — unchanged. `packages/context-core/src/types.ts` —
+additive-only (3 new exported interfaces, nothing removed or narrowed).

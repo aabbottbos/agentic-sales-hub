@@ -8,7 +8,12 @@ import type {
 export type { SkillDefinition };
 
 /** Product skill ids whose `.claude/skills/<id>/SKILL.md` is generated + drift-checked. */
-export const PRODUCT_SKILL_IDS = ["call-summary", "find-evidence", "sow-review"] as const;
+export const PRODUCT_SKILL_IDS = [
+  "call-summary",
+  "find-evidence",
+  "sow-review",
+  "call-prep",
+] as const;
 export type ProductSkillId = (typeof PRODUCT_SKILL_IDS)[number];
 
 export interface RunContext {
@@ -31,6 +36,8 @@ export interface SkillRunResult<T = unknown> {
   contextRead: string[];
   /** Present for skills whose definition sets `output.requires_citations`. */
   citationsValid?: boolean;
+  /** Present for generation-tier skills with a write grant, once persisted. */
+  artifactPath?: string;
   trace: TraceEntry[];
 }
 

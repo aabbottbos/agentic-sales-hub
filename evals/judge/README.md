@@ -81,3 +81,31 @@ Draft amendment text for `docs/specs/002-…`: see
 `docs/specs/002-call-summary-generation-path.md` "OQ2" — replace the "blocking,
 critical path, retry-median" resolution with "advisory metric, regression-tracked;
 the deterministic gates block; blocking rubric revisited with a stabler judge."
+
+## call-prep judge
+
+- **Rubric:** `call-prep-rubric.md`. **Prompt:** `call-prep-judge-prompt.md`. Same
+  four dimensions and mean-aggregation as `call-summary`'s, scored via
+  `scoreRubric`'s generalized `{rubricFile, promptFile}` pair (spec 004 JC6/JC7).
+  Same shared judge model (`judge-model.json`) — `claude-sonnet-5`, `attempts` 3.
+- **Gate:** advisory only, same rationale as `call-summary` — see "Resolution"
+  above. `citation_validity = 1.00` is the one hard gate for `call-prep`.
+
+Calibration check (spec 004 Task 12 — scaled down from plan 002's Task 12: this
+only confirms the judge doesn't degenerate, no numeric target to hit since JC6
+already ratifies advisory-only):
+
+```
+run 1   acme-prep   rubric_aggregate 2.50
+run 2   acme-prep   rubric_aggregate 3.75
+run 3   acme-prep   rubric_aggregate 4.00
+```
+
+The judge parsed on every run (no `unavailable`); `citation_validity` was 1.00
+every run. Scores are not pinned at a constant — same ~1.5pt swing on identical
+input as `call-summary`'s judge, consistent with the noise already documented
+above rather than a new problem specific to `call-prep`. A generated brief was
+read manually against `a-0001-brief.md` as a loose reference: well-grounded,
+correctly structured (goal / what we know / talking points / risks), and its one
+synthesized claim was correctly self-flagged `[unsourced]` rather than asserted.
+No rubric/prompt changes were needed.

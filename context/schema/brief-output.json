@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-sales-hub.dev/schema/brief-output.json",
+  "title": "Call-prep brief (call-prep output contract)",
+  "description": "OUTPUT-CONTRACT schema: validates the call-prep skill's structured return, not a file on disk.",
+  "type": "object",
+  "properties": {
+    "goal": { "type": "string", "minLength": 1 },
+    "what_we_know": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "talking_points": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "risks": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "citations": { "type": "array", "items": { "$ref": "#/$defs/citation" } },
+    "unsourced_claims": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "required": ["goal", "what_we_know", "talking_points", "risks", "citations", "unsourced_claims"],
+  "additionalProperties": false,
+  "$defs": {
+    "item": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "citation": { "$ref": "#/$defs/citation" }
+      },
+      "required": ["text", "citation"],
+      "additionalProperties": false
+    },
+    "citation": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "quote": { "type": "string", "minLength": 1 },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["path", "quote", "span"],
+      "additionalProperties": false
+    }
+  }
+}

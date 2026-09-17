@@ -93,6 +93,65 @@ describe("protect-paths hook", () => {
     });
     expect(code).toBe(0);
   });
+
+  it("blocks a direct Write to context/accounts/*/opportunities/*/artifacts/*.md", () => {
+    const { code, stderr } = runHook(protectHook, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: `context/accounts/acme-logistics/opportunities/${OPP}/artifacts/2026-09-11-call-prep.md`,
+        content: "x",
+      },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/writeArtifact|artifacts/i);
+  });
+
+  it("blocks a direct Edit to examples/demo-corpus/accounts/*/opportunities/*/artifacts/*.md (dual-root)", () => {
+    const { code, stderr } = runHook(protectHook, {
+      tool_name: "Edit",
+      tool_input: {
+        file_path: `examples/demo-corpus/accounts/acme-logistics/opportunities/${OPP}/artifacts/2026-09-11-call-prep.md`,
+        old_string: "a",
+        new_string: "b",
+      },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/writeArtifact|artifacts/i);
+  });
+
+  it("allows a Write to meetings/** (control case — the artifacts/ rule is scoped, not tree-wide)", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: `context/accounts/acme-logistics/opportunities/${OPP}/meetings/2026-09-11-discovery.md`,
+        content: "x",
+      },
+    });
+    expect(code).toBe(0);
+  });
+
+  it("blocks a direct MultiEdit to an artifacts/ file (both roots share the same rule)", () => {
+    const { code, stderr } = runHook(protectHook, {
+      tool_name: "MultiEdit",
+      tool_input: {
+        file_path: `examples/demo-corpus/accounts/meridian-grid/opportunities/${OPP}/artifacts/2026-09-11-proposal-draft.md`,
+        edits: [{ old_string: "a", new_string: "b" }],
+      },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/writeArtifact|artifacts/i);
+  });
+
+  it("allows a Write under inbound/** (proves the regex doesn't over-match the opportunity subtree)", () => {
+    const { code } = runHook(protectHook, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: `context/accounts/acme-logistics/opportunities/${OPP}/inbound/2026-09-11-note.md`,
+        content: "x",
+      },
+    });
+    expect(code).toBe(0);
+  });
 });
 
 describe("quarantine-inbound hook", () => {

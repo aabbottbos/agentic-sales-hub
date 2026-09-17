@@ -60,6 +60,9 @@ export type { TaintLedger, TaintLedgerEntry } from "./quarantine/taint.js";
 export { writeFindings } from "./findings/write-findings.js";
 export { appendOutcome } from "./outcomes/append-outcome.js";
 
+// Artifacts (generation write path)
+export { writeArtifact } from "./write-path.js";
+
 // Corpus validation
 export { validateCorpus } from "./validate-corpus.js";
 export type { CorpusValidationReport } from "./validate-corpus.js";
@@ -102,4 +105,7 @@ export type {
   WriteFindingsArgs,
   AppendOutcomeArgs,
   WriteOp,
+  ArtifactCitationInput,
+  WriteArtifactArgs,
+  WriteArtifactResult,
 } from "./types.js";
