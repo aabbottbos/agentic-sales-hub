@@ -80,12 +80,10 @@ export const callPrepImpl: SkillImpl<CallPrepInput, BriefOutput> = {
         const resolved = sourceText !== undefined ? resolveCitationSpan(sourceText, raw) : null;
         if (resolved) return resolved;
         unlocatable++;
-        // Out-of-range relative to the claimed source file when we have one
-        // (or a length-1 file's worth of text as a stand-in when we don't) —
-        // either way, entirely outside any real span, so it cannot coincide
-        // with a valid resolution.
-        const len = sourceText?.length ?? 0;
-        return { path, quote, span: [len, len + 1] };
+        if (sourceText === undefined) {
+          return { path, quote, span: [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER + 1] };
+        }
+        return { path, quote, span: [sourceText.length, sourceText.length + 1] };
       };
       if (parsed && typeof parsed === "object") {
         const p = parsed as Record<string, unknown>;
