@@ -179,13 +179,7 @@ function renderArtifact(a: RenderArgs, fm: Record<string, unknown>): string {
     `title: "${(fm.title as string).replaceAll('"', '\\"')}"`,
     `artifact_id: ${fm.artifact_id}`,
     `kind: ${fm.kind}`,
-    `generated_by: ${fm.generated_by}`,
-    `superseded: false`,
-    "citations:",
-    ...a.citations.map(
-      (c) =>
-        `  - claim: ${JSON.stringify(c.claim)}\n    path: ${c.path}\n    span: [${c.span[0]}, ${c.span[1]}]`,
-    ),
+    ...(a.citations.length ? ["citations:"] : ["citations: []"]),
     ...(a.unsourcedClaims?.length
       ? ["unsourced_claims:", ...a.unsourcedClaims.map((s) => `  - ${JSON.stringify(s)}`)]
       : []),
