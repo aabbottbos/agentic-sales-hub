@@ -7,6 +7,9 @@
  *   - context/legal/, examples/demo-corpus/legal/   (canonical, PR-reviewed only)
  *   - evals/golden/                                  (the golden eval set)
  *   - docs/intent/, docs/specs/                       (committed SDLC artifacts are immutable)
+ *   - .../opportunities/*\/artifacts/                 (generated artifacts are created ONLY
+ *                                                      through writeArtifact(), spec 004 —
+ *                                                      never a direct Write/Edit/MultiEdit)
  *
  * Both `context/` and `examples/demo-corpus/` are covered (tenancy seam,
  * WI-1): the demo corpus physically lives at `examples/demo-corpus/`, but a
@@ -29,12 +32,19 @@ function readStdin(): Promise<string> {
   });
 }
 
+// Artifacts under an opportunity are created ONLY through writeArtifact()
+// (spec 004) — never a direct Write/Edit/MultiEdit. Matches both roots
+// (tenancy seam, WI-1): the logical context/ root and examples/demo-corpus/.
+const ARTIFACTS_DIR =
+  /(?:^context|^examples\/demo-corpus)\/accounts\/[^/]+\/opportunities\/[^/]+\/artifacts\//;
+
 const PROTECTED_WRITE = [
   /^context\/legal\//,
   /^examples\/demo-corpus\/legal\//,
   /^evals\/golden\//,
   /^docs\/intent\//,
   /^docs\/specs\//,
+  ARTIFACTS_DIR,
 ];
 
 const APPEND_ONLY = /(?:context|examples\/demo-corpus)\/accounts\/[^/]+\/opportunities\//;
@@ -65,6 +75,12 @@ async function main(): Promise<void> {
     const fp = String(input.file_path ?? "")
       .replaceAll("\\", "/")
       .replace(/^\.\//, "");
+    if (ARTIFACTS_DIR.test(fp)) {
+      block(
+        `${fp} is under an opportunity's artifacts/ — generated artifacts are created ONLY ` +
+          `through writeArtifact() (spec 004), never a direct Write/Edit/MultiEdit.`,
+      );
+    }
     if (PROTECTED_WRITE.some((re) => re.test(fp))) {
       block(
         `${fp} is a protected path (canonical context / golden evals / committed SDLC ` +

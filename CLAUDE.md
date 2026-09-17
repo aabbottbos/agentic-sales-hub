@@ -7,13 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Phase 0 is built** (plan `docs/plans/001-context-substrate-eval-harness.md`). What exists and works:
 
 - `packages/context-core` — the context loader and security boundary (schema validation, scope resolution, provenance, append-only enforcement, quarantine + taint ledger, `writeFindings`).
-- `packages/skills` — `find-evidence` (retrieval) and `sow-review` (review) as **deterministic** impls (ADR `docs/decisions/0001-phase0-deterministic-skills.md`); `call-summary` (generation) as the first **LLM-backed** impl (`@anthropic-ai/sdk` behind the `impl/llm.ts` seam; spec/plan 002). Driven by YAML definitions; `runSkill` enforces grants + output contract.
+- `packages/skills` — `find-evidence` (retrieval) and `sow-review` (review) as **deterministic** impls (ADR `docs/decisions/0001-phase0-deterministic-skills.md`); `call-summary` and `call-prep` (generation) as **LLM-backed** impls (`@anthropic-ai/sdk` behind the `impl/llm.ts` seam; spec/plan 002, spec/plan 004). `call-prep` is the first skill with a write grant — it persists via `writeArtifact()` and opens an `outcomes.jsonl` record automatically. Driven by YAML definitions; `runSkill` enforces grants + output contract.
 - `examples/demo-corpus/` — the "Minimal + 1 opportunity" synthetic corpus (Meridian Grid / Acme Logistics) + `context/schema/` (17 JSON Schemas, the published spec, unmoved — `context/` is a logical root marker resolved via `resolveContextRoot()`, not a fixed physical location).
 - `evals/` — scorers, labeled cases, `pnpm eval --suite <…>`, and the injection harness. All six Phase 0 success criteria pass.
 - `.claude/hooks/` — quarantine + protect-paths (PreToolUse), format-on-write (PostToolUse); `.claude/settings.json` registers them.
 - `.github/workflows/` — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`.
 
-Not yet built (Phase 1+): `packages/mcp-agentic-sales-hub`, `apps/surface/`, the other generation skills (`call-prep` / `proposal-draft`), `context/legal/templates/`, most of the spec §10 corpus.
+Not yet built (Phase 1+): `packages/mcp-agentic-sales-hub`, `apps/surface/`, `proposal-draft`, `context/legal/templates/`, most of the spec §10 corpus.
 
 Two documents are the source of truth and should be read before any non-trivial work:
 
@@ -66,6 +66,7 @@ A PR touching `.claude/skills/**`, `packages/skills/**`, `packages/context-core/
 - The injection case: the quarantine hook blocks the induced write (`injection: PASS`)
 - `find-evidence` recall ≥ **0.90** on required spans; citation validity = **1.00**
 - `call-summary` (generation) — **one hard gate:** citation validity = **1.00** (deterministic, resolve-only, stable). The LLM-judge **rubric** (≥ 4.0/5 target) and **commitment recall** (≥ 0.90 target) are **advisory** — computed + regression-tracked, not build-blocking. A single judge is too noisy; the token-overlap recall scorer is too literal to bridge a valid paraphrase. See `evals/judge/README.md` + spec 002 amendment A1.
+- `call-prep` (generation) — **one hard gate:** citation validity = **1.00** (deterministic, resolve-only). The LLM-judge rubric (target ≥ 4.0/5) is **advisory** — same rationale as `call-summary`'s (spec 004 JC6). `writeArtifact()` persists every accepted output as a new artifact and opens an `unused` outcome record automatically; the eval suite runs against a scratch corpus copy, never `examples/demo-corpus/` directly (JC9).
 - **No net regression** vs. the last committed result in `evals/results/`
 
 **Every production defect becomes a permanent eval case** — the fix PR must include the case that would have caught it.
@@ -81,7 +82,7 @@ A PR touching `.claude/skills/**`, `packages/skills/**`, `packages/context-core/
 | `pnpm build` | build the packages |
 | `pnpm lint` | eslint + prettier --check |
 | `pnpm format` | prettier --write |
-| `pnpm eval --suite <sow-review\|find-evidence\|all>` | run the eval suite; `--write-results` (auto in CI) writes `evals/results/<date>-<sha>.json` |
+| `pnpm eval --suite <sow-review\|find-evidence\|call-summary\|call-prep\|all>` | run the eval suite; `--write-results` (auto in CI) writes `evals/results/<date>-<sha>.json` |
 | `pnpm corpus:validate` | validate every context file (defaults to `examples/demo-corpus/`; `--root`/`ASH_CONTEXT_ROOT` overrides), inbound hashes, dir-name cross-checks |
 | `pnpm check:no-real-data` | synthetic-namespace + `fictional: true` guard |
 | `pnpm skills:sync` / `:check` | regenerate / drift-check `.claude/skills/<id>/SKILL.md` from the YAML definitions |

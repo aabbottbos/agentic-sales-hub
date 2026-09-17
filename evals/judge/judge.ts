@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { complete } from "../../packages/skills/src/impl/llm.js";
-import type { SummaryOutput } from "../../packages/skills/src/impl/summary-schema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -80,13 +79,13 @@ function loadConfig(): JudgeConfig {
   return cfg;
 }
 
-const rubricText = readFileSync(join(here, "rubric.md"), "utf8");
-const promptTemplate = readFileSync(join(here, "judge-prompt.md"), "utf8");
+const DEFAULT_RUBRIC_FILE = join(here, "rubric.md");
+const DEFAULT_PROMPT_FILE = join(here, "judge-prompt.md");
 
 const ZERO: RubricScores = { grounding: 0, completeness: 0, tone: 0, structure: 0 };
 
 /**
- * Score a call-summary output against the committed rubric with the committed
+ * Score a generation-skill output against a committed rubric with the committed
  * judge model. Runs `attempts` completions, takes the median per dimension, then
  * aggregates.
  *
@@ -95,14 +94,25 @@ const ZERO: RubricScores = { grounding: 0, completeness: 0, tone: 0, structure: 
  * suite: individual empty/unparseable responses are retried within the loop, and
  * if every attempt fails this returns `{ ...ZERO, aggregate: 0, unavailable:
  * true }` rather than throwing. The deterministic gates still decide the build.
+ *
+ * `output` is `unknown` — the judge only ever `JSON.stringify`s it into the
+ * prompt, never inspects specific fields, so it works for any skill's output
+ * shape (call-summary's `SummaryOutput`, call-prep's brief, etc).
+ *
+ * `rubricFile`/`promptFile` default to the original call-summary pair
+ * (`rubric.md`/`judge-prompt.md`), so existing call sites are unaffected. Pass
+ * an explicit pair (e.g. `call-prep-rubric.md`/`call-prep-judge-prompt.md`) to
+ * score a different skill's output against its own rubric.
  */
 export async function scoreRubric(
-  output: SummaryOutput,
+  output: unknown,
   noteText: string,
-  opts?: { attempts?: number },
+  opts?: { attempts?: number; rubricFile?: string; promptFile?: string },
 ): Promise<RubricResult> {
   const c = loadConfig();
   const attempts = opts?.attempts ?? c.attempts;
+  const rubricText = readFileSync(opts?.rubricFile ?? DEFAULT_RUBRIC_FILE, "utf8");
+  const promptTemplate = readFileSync(opts?.promptFile ?? DEFAULT_PROMPT_FILE, "utf8");
   const user = promptTemplate
     .replace("{{RUBRIC}}", rubricText)
     .replace("{{NOTE}}", noteText)

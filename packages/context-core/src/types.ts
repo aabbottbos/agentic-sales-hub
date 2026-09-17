@@ -152,6 +152,35 @@ export interface WriteFindingsArgs {
   artifactId?: string;
 }
 
+export interface ArtifactCitationInput {
+  /** The claim this citation supports — becomes citations[].claim in the artifact frontmatter. */
+  claim: string;
+  path: string;
+  span: Span;
+}
+
+export interface WriteArtifactArgs {
+  accountSlug: string;
+  crmId: string;
+  /** e.g. "brief" — must be in artifact.json's kind enum. */
+  kind: string;
+  /** The skill id that produced this — becomes generated_by. */
+  generatedBy: string;
+  title: string;
+  /** Rendered markdown body (post-frontmatter). The caller (runSkill) renders
+   *  the structured output into prose; writeArtifact does not know skill-specific shape. */
+  body: string;
+  citations: ArtifactCitationInput[];
+  unsourcedClaims?: string[];
+  /** Explicit artifact id (deterministic tests); auto-minted if omitted. */
+  artifactId?: string;
+}
+
+export interface WriteArtifactResult {
+  artifactPath: string;
+  artifactId: string;
+}
+
 export interface AppendOutcomeArgs {
   accountSlug: string;
   crmId: string;
