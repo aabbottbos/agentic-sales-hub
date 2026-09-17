@@ -7,7 +7,7 @@ import { AppendOnlyViolationError, ScopeViolationError, SchemaValidationError } 
 import { SCHEMA_VERSION } from "./schema/registry.js";
 import { resolveContextPath } from "./fs/resolve-path.js";
 import { appendOutcome } from "./outcomes/append-outcome.js";
-import type { WriteArtifactArgs, WriteArtifactResult } from "./types.js";
+import type { ArtifactCitationInput, WriteArtifactArgs, WriteArtifactResult } from "./types.js";
 
 export interface WriteArtifactDeps {
   root: string;
@@ -170,6 +170,7 @@ function buildFrontmatter(a: RenderArgs): Record<string, unknown> {
 }
 
 function renderArtifact(a: RenderArgs, fm: Record<string, unknown>): string {
+  const citations = fm.citations as ArtifactCitationInput[];
   const lines = [
     "---",
     `fictional: ${fm.fictional}`,
@@ -179,7 +180,17 @@ function renderArtifact(a: RenderArgs, fm: Record<string, unknown>): string {
     `title: "${(fm.title as string).replaceAll('"', '\\"')}"`,
     `artifact_id: ${fm.artifact_id}`,
     `kind: ${fm.kind}`,
-    ...(a.citations.length ? ["citations:"] : ["citations: []"]),
+    `generated_by: ${fm.generated_by}`,
+    `superseded: ${fm.superseded}`,
+    ...(citations.length
+      ? [
+          "citations:",
+          ...citations.map(
+            (c) =>
+              `  - claim: ${JSON.stringify(c.claim)}\n    path: ${c.path}\n    span: [${c.span[0]}, ${c.span[1]}]`,
+          ),
+        ]
+      : ["citations: []"]),
     ...(a.unsourcedClaims?.length
       ? ["unsourced_claims:", ...a.unsourcedClaims.map((s) => `  - ${JSON.stringify(s)}`)]
       : []),
