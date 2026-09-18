@@ -1,0 +1,25 @@
+{
+  "name": "@agentic-sales-hub/mcp-agentic-sales-hub",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agentic-sales-hub-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@agentic-sales-hub/context-core": "workspace:*",
+    "@agentic-sales-hub/skills": "workspace:*",
+    "@modelcontextprotocol/sdk": "~1.30.0"
+  }
+}
