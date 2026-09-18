@@ -20,7 +20,7 @@ export interface BackfillReport {
  * `actor` is left untouched (byte-for-byte), so a second run reports
  * `filesModified: 0`.
  *
- * Scoped narrowly to `accounts/​**​/opportunities/​**​/artifacts/*.md` and
+ * Scoped narrowly to `accounts/*\/opportunities/*\/artifacts/*.md` and
  * sibling `outcomes.jsonl` files — the two record shapes Task 1's schema
  * change actually added `actor` to. Not a general corpus walk (that's
  * `validateCorpus`'s job); this only needs to find, parse, patch, and
