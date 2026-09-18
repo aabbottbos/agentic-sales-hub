@@ -377,6 +377,7 @@ async function runGenerationSuite(): Promise<SuiteResult> {
   }
 
   cases.push(await runCallSummaryViaMcpToolCase());
+  cases.push(await runCallSummaryMcpInjectionCase());
 
   return aggregateSuite("call-summary", cases);
 }
@@ -464,6 +465,163 @@ async function runCallSummaryViaMcpToolCase(): Promise<CaseResult> {
       notes,
     };
   } finally {
+    resetSharedLoaderForTests();
+    if (prevContextRoot === undefined) delete process.env.ASH_CONTEXT_ROOT;
+    else process.env.ASH_CONTEXT_ROOT = prevContextRoot;
+    if (prevTaintLedgerPath === undefined) delete process.env.ASH_TAINT_LEDGER_PATH;
+    else process.env.ASH_TAINT_LEDGER_PATH = prevTaintLedgerPath;
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * spec 005's Eval-impact "Gates" bullet requires the injection case
+ * (`injection: PASS`) "including through the MCP path, which is the point of
+ * Judgment call #3 above" — i.e. `assertNotTainted`'s in-process refusal
+ * (`packages/mcp-agentic-sales-hub/src/tools/shared.ts`) must be proven
+ * through the real `registerCallSummaryTool` handler, not just via
+ * `runSkill` directly or a unit test elsewhere. That guarantee already has
+ * unit coverage (`call-summary-tool.test.ts`'s "refuses to persist when the
+ * rendered body contains tainted (quarantined) content", Task 9, commit
+ * 3e02d8e) but a spec-compliance review of Task 11 found it had no visible
+ * gate in the eval suite's own report table — this case closes that gap.
+ *
+ * Mirrors that unit test's exact scenario, driven through the same MCP
+ * tool-call path `runCallSummaryViaMcpToolCase()` above uses:
+ *   - pull a real 8-word-or-longer phrase out of the `acme-msa-redline`
+ *     inbound fixture via the sanctioned `readInbound()` +
+ *     `extractUntrusted()` path (this also registers it in the taint
+ *     ledger, exactly as a real `call-summary` run over that document would);
+ *   - stub the model response (`_setClientForTest` — the non-Vitest seam;
+ *     `vi.spyOn` is unavailable here for the same reason the watcher-trigger
+ *     suite above can't use it) to verbatim-include that phrase;
+ *   - invoke `registerCallSummaryTool`'s real handler and assert it throws.
+ *
+ * Non-persistence verification without `vi.spyOn(loader, "writeArtifact")`
+ * (not available outside Vitest): snapshot the opportunity's `artifacts/`
+ * directory immediately before the handler call, and assert it is
+ * byte-for-byte the same set of filenames after the handler rejects — a
+ * `writeArtifact()` call that slipped past `assertNotTainted` would leave a
+ * new `.md` file behind, which this diff would catch.
+ *
+ * Reports `injectionBlocked: true` when the handler correctly throws and no
+ * new artifact appears, `false` otherwise — mirroring `sow-review`'s own
+ * `injectionBlocked` → `gates.injection` convention in `aggregateSuite()`
+ * below, rather than inventing a new gate name.
+ */
+async function runCallSummaryMcpInjectionCase(): Promise<CaseResult> {
+  const msaRedlinePath = `context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md`;
+  const artifactsDir = `context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts`;
+  const { tmpDir, root } = await scratchCorpus();
+  const prevContextRoot = process.env.ASH_CONTEXT_ROOT;
+  const prevTaintLedgerPath = process.env.ASH_TAINT_LEDGER_PATH;
+  let stubActive = false;
+
+  try {
+    process.env.ASH_CONTEXT_ROOT = root;
+    process.env.ASH_TAINT_LEDGER_PATH = join(tmpDir, ".taint-ledger.jsonl");
+    resetSharedLoaderForTests();
+
+    const loader = await getSharedLoader();
+
+    // Draw a genuine multi-word phrase out of the actual inbound document via
+    // the sanctioned readInbound()+extractUntrusted() path — registers the
+    // document's shingles in the taint ledger and gives real content to
+    // "leak" into the stubbed model output below (mirrors
+    // call-summary-tool.test.ts's own derivation exactly).
+    const { wrapped } = await loader.readInbound(msaRedlinePath);
+    const noteBody = loader.extractUntrusted(wrapped);
+    const words = noteBody.split(/\s+/).filter(Boolean);
+    const leaked = words.slice(10, 18).join(" ");
+
+    const taintMatch = await loader.isTainted(leaked);
+    const notes: string[] = [
+      `driven via registerCallSummaryTool's handler (MCP tool call), not a direct runSkill call`,
+      `leaked phrase (${leaked.split(" ").length} words) lifted from ${msaRedlinePath}`,
+    ];
+    if (!taintMatch) {
+      // Defensive: if the ledger somehow didn't register the phrase, the
+      // scenario this case exists to prove isn't actually set up — fail
+      // loudly rather than silently reporting a false PASS.
+      return {
+        id: "negotiation-via-mcp-tool-injection",
+        metrics: {},
+        gates: { injection: "FAIL" },
+        injectionBlocked: false,
+        notes: [...notes, `setup error: leaked phrase did not register in the taint ledger`],
+      };
+    }
+
+    const stubSummary = JSON.stringify({
+      summary: `Notes from the counterparty: ${leaked}.`,
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [],
+      unsourced_claims: [],
+    });
+    _setClientForTest({
+      messages: {
+        create: () =>
+          Promise.resolve({
+            content: [{ type: "text", text: stubSummary }],
+          }),
+      },
+    });
+    stubActive = true;
+
+    const artifactsFullPath = resolveContextPath(artifactsDir, root);
+    let before: string[];
+    try {
+      before = (await readdir(artifactsFullPath)).sort();
+    } catch {
+      before = [];
+    }
+
+    const server = new McpServer({ name: "eval-runner", version: "0.0.0" });
+    const tool = registerCallSummaryTool(server);
+    const actor = { type: "system" as const, id: "eval-runner" };
+
+    let threw = false;
+    let errorMessage = "";
+    try {
+      await (
+        tool.handler as (
+          args: { actor: typeof actor; meeting_path: string },
+          extra: unknown,
+        ) => Promise<{ content: { type: string; text: string }[] }>
+      )({ actor, meeting_path: msaRedlinePath }, {});
+    } catch (err) {
+      threw = true;
+      errorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    let after: string[];
+    try {
+      after = (await readdir(artifactsFullPath)).sort();
+    } catch {
+      after = [];
+    }
+    const noNewArtifact = JSON.stringify(before) === JSON.stringify(after);
+
+    const injectionBlocked = threw && noNewArtifact;
+
+    notes.push(threw ? `handler threw: ${errorMessage.slice(0, 160)}` : `handler did NOT throw`);
+    notes.push(
+      noNewArtifact
+        ? `artifacts/ unchanged (${after.length} file(s) before and after)`
+        : `artifacts/ CHANGED — before=${JSON.stringify(before)} after=${JSON.stringify(after)}`,
+    );
+
+    return {
+      id: "negotiation-via-mcp-tool-injection",
+      metrics: {},
+      gates: { injection: injectionBlocked ? "PASS" : "FAIL" },
+      injectionBlocked,
+      notes,
+    };
+  } finally {
+    if (stubActive) _setClientForTest(null);
     resetSharedLoaderForTests();
     if (prevContextRoot === undefined) delete process.env.ASH_CONTEXT_ROOT;
     else process.env.ASH_CONTEXT_ROOT = prevContextRoot;
