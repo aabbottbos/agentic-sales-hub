@@ -91,12 +91,28 @@ describe("schema registry", () => {
         date: "2026-09-10",
         artifact: "context/accounts/x/opportunities/y/artifacts/a-0002-proposal.md",
         outcome: "sent",
+        actor: { type: "system", id: "test-actor" },
       }).valid,
     ).toBe(true);
     expect(
-      validateAgainst(reg, "outcome", { date: "2026-09-10", artifact: "x", outcome: "maybe" })
-        .valid,
+      validateAgainst(reg, "outcome", {
+        date: "2026-09-10",
+        artifact: "x",
+        outcome: "maybe",
+        actor: { type: "system", id: "test-actor" },
+      }).valid,
     ).toBe(false);
+  });
+
+  it("rejects an outcome record missing the now-required actor field", async () => {
+    const reg = await loadSchemas(schemaDir);
+    const res = validateAgainst(reg, "outcome", {
+      date: "2026-09-10",
+      artifact: "context/accounts/x/opportunities/y/artifacts/a-0002-proposal.md",
+      outcome: "sent",
+    });
+    expect(res.valid).toBe(false);
+    expect(res.issues.join(" ")).toMatch(/actor/);
   });
 });
 

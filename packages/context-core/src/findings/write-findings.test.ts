@@ -20,6 +20,7 @@ const fixturesRoot = join(here, "../../test/fixtures");
 
 const OPP = "006Ax0000GkLmNpQAA";
 const sourceDoc = `context/accounts/fix-co/opportunities/${OPP}/inbound/2026-09-03-fixture-redline.md`;
+const actor = { type: "system" as const, id: "test-actor" };
 
 let registry: SchemaRegistry;
 beforeAll(async () => {
@@ -162,6 +163,7 @@ describe("appendOutcome", () => {
           artifact: `context/accounts/fix-co/opportunities/${OPP}/artifacts/a-0001-brief.md`,
           outcome: "superseded",
           date: "2026-09-18",
+          actor,
         },
         { root, registry },
       );
@@ -170,6 +172,7 @@ describe("appendOutcome", () => {
       expect(JSON.parse(lines.at(-1)!)).toMatchObject({
         outcome: "superseded",
         date: "2026-09-18",
+        actor,
       });
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -188,6 +191,7 @@ describe("appendOutcome", () => {
             artifact: "x",
             outcome: "maybe",
             date: "2026-09-18",
+            actor,
           },
           { root, registry },
         ),

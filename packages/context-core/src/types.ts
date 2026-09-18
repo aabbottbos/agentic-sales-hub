@@ -180,6 +180,8 @@ export interface WriteArtifactArgs {
   unsourcedClaims?: string[];
   /** Explicit artifact id (deterministic tests); auto-minted if omitted. */
   artifactId?: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
 }
 
 export interface WriteArtifactResult {
@@ -195,6 +197,8 @@ export interface AppendOutcomeArgs {
   outcome: OutcomeKind;
   /** ISO date, `YYYY-MM-DD`. */
   date: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
   note?: string;
 }
 

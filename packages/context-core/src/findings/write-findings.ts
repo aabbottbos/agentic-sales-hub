@@ -122,6 +122,7 @@ function renderFindingsArtifact(a: RenderArgs): string {
     "kind: findings",
     "generated_by: sow-review",
     "superseded: false",
+    'actor: {type: system, id: "sow-review"}',
     "citations: []",
     `source_document: ${a.sourceDocument}`,
     `source_hash: "${a.sourceHash}"`,

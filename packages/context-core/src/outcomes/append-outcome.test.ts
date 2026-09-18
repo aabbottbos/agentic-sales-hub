@@ -17,6 +17,7 @@ const fixturesRoot = join(here, "../../test/fixtures");
 
 const OPP = "006Ax0000GkLmNpQAA";
 const artifact = `context/accounts/fix-co/opportunities/${OPP}/artifacts/a-0001-brief.md`;
+const actor = { type: "system" as const, id: "test-actor" };
 
 let registry: SchemaRegistry;
 beforeAll(async () => {
@@ -43,7 +44,7 @@ describe("appendOutcome", () => {
     const { tmpDir, root } = await tempCorpus();
     try {
       const { outcomesPath } = await appendOutcome(
-        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18" },
+        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18", actor },
         { root, registry },
       );
       expect(outcomesPath).toBe(`context/accounts/fix-co/opportunities/${OPP}/outcomes.jsonl`);
@@ -53,6 +54,7 @@ describe("appendOutcome", () => {
         date: "2026-09-18",
         artifact,
         outcome: "won",
+        actor,
       });
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -69,6 +71,7 @@ describe("appendOutcome", () => {
           artifact,
           outcome: "sent",
           date: "2026-09-18",
+          actor,
           note: "sent via email",
         },
         { root, registry },
@@ -88,7 +91,14 @@ describe("appendOutcome", () => {
       await expect(
         appendOutcome(
           // @ts-expect-error deliberately bad enum value
-          { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "maybe", date: "2026-09-18" },
+          {
+            accountSlug: "fix-co",
+            crmId: OPP,
+            artifact,
+            outcome: "maybe",
+            date: "2026-09-18",
+            actor,
+          },
           { root, registry },
         ),
       ).rejects.toBeInstanceOf(SchemaValidationError);
@@ -103,7 +113,7 @@ describe("appendOutcome", () => {
       await expect(
         appendOutcome(
           // @ts-expect-error deliberately missing `date`
-          { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won" },
+          { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", actor },
           { root, registry },
         ),
       ).rejects.toBeInstanceOf(SchemaValidationError);
@@ -116,11 +126,18 @@ describe("appendOutcome", () => {
     const { tmpDir, root } = await tempCorpus();
     try {
       await appendOutcome(
-        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "sent", date: "2026-09-17" },
+        {
+          accountSlug: "fix-co",
+          crmId: OPP,
+          artifact,
+          outcome: "sent",
+          date: "2026-09-17",
+          actor,
+        },
         { root, registry },
       );
       const { outcomesPath } = await appendOutcome(
-        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18" },
+        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18", actor },
         { root, registry },
       );
       const text = await readFile(resolveContextPath(outcomesPath, root), "utf8");
@@ -137,7 +154,7 @@ describe("appendOutcome", () => {
     const { tmpDir, root } = await tempCorpusAt("demo-root");
     try {
       const { outcomesPath } = await appendOutcome(
-        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18" },
+        { accountSlug: "fix-co", crmId: OPP, artifact, outcome: "won", date: "2026-09-18", actor },
         { root, registry },
       );
       const expectedAbs = join(root, `accounts/fix-co/opportunities/${OPP}/outcomes.jsonl`);
