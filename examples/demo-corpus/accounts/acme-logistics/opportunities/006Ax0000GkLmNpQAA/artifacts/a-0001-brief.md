@@ -1,13 +1,16 @@
 ---
 fictional: true
 mutability: accumulating
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 created: "2026-08-04T00:00:00Z"
 title: Call-prep brief — Acme demo + technical review (2026-08-05)
 artifact_id: a-0001
 kind: brief
 generated_by: call-prep
 superseded: false
+actor:
+  type: system
+  id: legacy
 citations:
   - claim: Acme's prior visibility pilot stalled at TMS integration, which is the objection to answer.
     path: context/accounts/acme-logistics/account.md
