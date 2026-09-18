@@ -156,6 +156,8 @@ export interface WriteFindingsArgs {
   findings: Finding[];
   /** Optional explicit artifact id; auto-generated if omitted. */
   artifactId?: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
 }
 
 export interface ArtifactCitationInput {

@@ -77,11 +77,11 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
   const ledgerPath = opts.taintLedgerPath ?? join(repoRoot, ".claude/.taint-ledger.jsonl");
   const ledger: TaintLedger = createTaintLedger(ledgerPath);
   // Per-opportunity write serialization for this loader instance's lifetime
-  // (spec 005 OQ#5). Only the loader-bound writeArtifact/appendOutcome
-  // bindings below route through this — write-path.ts's own internal call to
-  // the raw appendOutcome function stays unwrapped, which is what prevents
-  // writeArtifact's auto-opened outcome write from deadlocking against its
-  // own enclosing queued call.
+  // (spec 005 OQ#5). Only the loader-bound writeArtifact/appendOutcome/
+  // writeFindings bindings below route through this — write-path.ts's own
+  // internal call to the raw appendOutcome function stays unwrapped, which is
+  // what prevents writeArtifact's auto-opened outcome write from deadlocking
+  // against its own enclosing queued call.
   const opportunityQueue = createOpportunityQueue();
 
   const readOne = (path: string): Promise<ContextFile> => readContextFile(path, { root, registry });
@@ -132,7 +132,9 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
     isTainted: (value) => ledger.match(value),
 
     writeFindings: (args) =>
-      writeFindings(args, { root, registry, ...(opts.now ? { now: opts.now } : {}) }),
+      opportunityQueue.run(opportunityKey(args.accountSlug, args.crmId), () =>
+        writeFindings(args, { root, registry, ...(opts.now ? { now: opts.now } : {}) }),
+      ),
 
     appendOutcome: (args) =>
       opportunityQueue.run(opportunityKey(args.accountSlug, args.crmId), () =>

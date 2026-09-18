@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createLoader } from "../loader.js";
-import type { ArtifactCitationInput } from "../types.js";
+import type { ArtifactCitationInput, Finding } from "../types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../../..");
@@ -18,6 +18,20 @@ const citation: ArtifactCitationInput = {
   claim: "Services scope is a common concern.",
   path: "context/org/company.md",
   span: [0, 20],
+};
+
+const sourceDoc = `context/accounts/${ACCOUNT}/opportunities/${OPP}/inbound/2026-09-03-fixture-redline.md`;
+
+const blockerFinding: Finding = {
+  finding_id: "f-001",
+  document: sourceDoc,
+  locator: { clause: "9.3", span: [10, 60] },
+  issue: "Uncapped indemnity",
+  severity: "blocker",
+  position: "unacceptable",
+  citation: { path: "context/legal/clause-library/indemnity.md", span: [200, 240] },
+  suggested_redline: "Cap indemnity at trailing twelve months fees.",
+  confidence: 0.9,
 };
 
 /** Same tempCorpus() pattern as write-path.test.ts / write-findings.test.ts. */
@@ -195,6 +209,91 @@ describe("loader writeArtifact/appendOutcome — per-opportunity queue integrati
       const allExpectedActorIds = [...writeActors, ...outcomeActors].map((a) => a.id).sort();
       const actualActorIds = records.map((r) => r.actor.id).sort();
       expect(actualActorIds).toEqual(allExpectedActorIds);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("writeFindings routes through the same per-opportunity queue as writeArtifact/appendOutcome (review-review gap fix)", async () => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      const loader = await createLoader({
+        repoRoot: tmpDir,
+        root,
+        schemaDir,
+        now: () => new Date("2026-09-18T12:00:00Z"),
+      });
+
+      const N = 8; // writeFindings calls
+      const M = 8; // writeArtifact calls, interleaved against the SAME opportunity
+
+      const findingsActors = Array.from({ length: N }, (_, i) => ({
+        type: "human" as const,
+        id: `reviewer-${i}`,
+      }));
+      const artifactActors = Array.from({ length: M }, (_, i) => ({
+        type: "system" as const,
+        id: `writer-${i}`,
+      }));
+
+      // writeFindings mints its default artifact id from the injected clock
+      // with no mint-and-retry loop (unlike writeArtifact), so concurrent
+      // calls under a frozen `now` need explicit distinct ids here — that's a
+      // property of writeFindings' id scheme, not of the queue under test.
+      const findingsCalls = findingsActors.map((actor, i) =>
+        loader.writeFindings({
+          accountSlug: ACCOUNT,
+          crmId: OPP,
+          sourceDocument: sourceDoc,
+          findings: [blockerFinding],
+          artifactId: `f-concurrent-${i}`,
+          actor,
+        }),
+      );
+      const artifactCalls = artifactActors.map((actor, i) =>
+        loader.writeArtifact({
+          accountSlug: ACCOUNT,
+          crmId: OPP,
+          kind: "brief",
+          generatedBy: "call-prep",
+          title: `Interleaved brief ${i}`,
+          body: `Body ${i}.`,
+          citations: [citation],
+          actor,
+        }),
+      );
+
+      const [findingsResults, artifactResults] = await Promise.all([
+        Promise.all(findingsCalls),
+        Promise.all(artifactCalls),
+      ]);
+
+      // N distinct findings artifacts, no collisions — only possible if
+      // writeFindings' own append-only/id-collision guards never raced against
+      // concurrent writeArtifact calls on the same opportunity, i.e. both are
+      // genuinely serialized through one queue.
+      const findingsPaths = findingsResults.map((r) => r.artifactPath);
+      expect(new Set(findingsPaths).size).toBe(N);
+      for (const p of findingsPaths) expect(p).toMatch(/-findings\.md$/);
+
+      const artifactIds = artifactResults.map((r) => r.artifactId);
+      expect(new Set(artifactIds).size).toBe(M);
+
+      // Filesystem agrees: N findings files + M brief files + the pre-existing
+      // a-0001-brief.md, each present exactly once.
+      const artifactsDir = join(root, "accounts", ACCOUNT, "opportunities", OPP, "artifacts");
+      const files = await readdir(artifactsDir);
+      const findingsFiles = files.filter((f) => f.endsWith("-findings.md"));
+      const briefFiles = files.filter((f) => f.endsWith("-brief.md"));
+      expect(findingsFiles).toHaveLength(N);
+      expect(briefFiles).toHaveLength(M + 1);
+
+      // Each writeArtifact call still auto-opened exactly one "unused" outcome
+      // (writeFindings does not touch outcomes.jsonl at all) -> exactly M lines.
+      const outcomesPath = join(root, "accounts", ACCOUNT, "opportunities", OPP, "outcomes.jsonl");
+      const outcomeText = await readFile(outcomesPath, "utf8");
+      const outcomeLines = outcomeText.trim().split("\n").filter(Boolean);
+      expect(outcomeLines).toHaveLength(M);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

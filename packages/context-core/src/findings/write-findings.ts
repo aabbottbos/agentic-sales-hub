@@ -7,7 +7,7 @@ import { sha256 } from "../quarantine/hash.js";
 import { AppendOnlyViolationError, SchemaValidationError } from "../errors.js";
 import { SCHEMA_VERSION } from "../schema/registry.js";
 import { resolveContextPath } from "../fs/resolve-path.js";
-import type { Finding, WriteFindingsArgs } from "../types.js";
+import type { Actor, Finding, WriteFindingsArgs } from "../types.js";
 
 export interface WriteFindingsDeps {
   root: string;
@@ -67,6 +67,7 @@ export async function writeFindings(
     sourceDocument: args.sourceDocument,
     sourceHash,
     findings: args.findings,
+    actor: args.actor,
   });
 
   await mkdir(dirname(absPath), { recursive: true });
@@ -107,6 +108,7 @@ interface RenderArgs {
   sourceDocument: string;
   sourceHash: string;
   findings: Finding[];
+  actor: Actor;
 }
 
 function renderFindingsArtifact(a: RenderArgs): string {
@@ -122,7 +124,7 @@ function renderFindingsArtifact(a: RenderArgs): string {
     "kind: findings",
     "generated_by: sow-review",
     "superseded: false",
-    'actor: {type: system, id: "sow-review"}',
+    `actor: {type: ${a.actor.type}, id: "${a.actor.id.replaceAll('"', '\\"')}"}`,
     "citations: []",
     `source_document: ${a.sourceDocument}`,
     `source_hash: "${a.sourceHash}"`,
