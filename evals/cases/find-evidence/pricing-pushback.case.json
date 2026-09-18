@@ -10,7 +10,7 @@
     { "path": "context/org/pricing.md", "span": [575, 609], "required": true },
     {
       "path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0002-proposal.md",
-      "span": [907, 934],
+      "span": [942, 969],
       "required": true
     }
   ]

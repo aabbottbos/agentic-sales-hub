@@ -401,7 +401,11 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
       const result = await runSkill(
         "call-prep",
         { account_slug: "acme-logistics", opp_id: OPP },
-        { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        {
+          loader: scratchLoader,
+          scopeParams: { accountSlug: "acme-logistics", oppId: OPP },
+          actor: { type: "system", id: "test" },
+        },
       );
 
       expect(result.citationsValid).toBe(true);
@@ -447,6 +451,41 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
           { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
         ),
       ).rejects.toThrow(/citation validity/i);
+
+      expect(writeArtifactSpy).not.toHaveBeenCalled();
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to persist when ctx.actor is missing — throws before writeArtifact, even though citations are valid", async () => {
+    const { tmpDir, loader: scratchLoader } = await scratchCorpus();
+    try {
+      const raw = await readFile(join(tmpDir, "demo-corpus/org/company.md"), "utf8");
+      const quoteStart = raw.indexOf("Meridian Grid is a mid-market B2B company");
+      const quote = raw.slice(
+        quoteStart,
+        quoteStart + "Meridian Grid is a mid-market B2B company".length,
+      );
+      const citation = { path: "context/org/company.md", quote, span: [0, 0] as [number, number] };
+      const stub = JSON.stringify({
+        goal: "Confirm scope and champion alignment",
+        what_we_know: [{ text: "Meridian sells a supply-chain visibility platform.", citation }],
+        talking_points: [],
+        risks: [],
+        citations: [{ path: "context/org/company.md", quote }],
+        unsourced_claims: [],
+      });
+      vi.spyOn(llm, "complete").mockResolvedValue(stub);
+      const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
+
+      await expect(
+        runSkill(
+          "call-prep",
+          { account_slug: "acme-logistics", opp_id: OPP },
+          { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        ),
+      ).rejects.toThrow(/missing ctx\.actor/i);
 
       expect(writeArtifactSpy).not.toHaveBeenCalled();
     } finally {

@@ -1,11 +1,12 @@
 import type {
+  Actor,
   ContextLoader,
   Finding,
   RetrievalHit,
   SkillDefinition,
 } from "@agentic-sales-hub/context-core";
 
-export type { SkillDefinition };
+export type { SkillDefinition, Actor };
 
 /** Product skill ids whose `.claude/skills/<id>/SKILL.md` is generated + drift-checked. */
 export const PRODUCT_SKILL_IDS = [
@@ -19,6 +20,7 @@ export type ProductSkillId = (typeof PRODUCT_SKILL_IDS)[number];
 export interface RunContext {
   loader: ContextLoader;
   scopeParams: { accountSlug?: string; oppId?: string };
+  actor?: Actor;
 }
 
 export interface TraceEntry {

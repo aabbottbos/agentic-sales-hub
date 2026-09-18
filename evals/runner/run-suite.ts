@@ -341,7 +341,11 @@ async function runCallPrepSuite(): Promise<SuiteResult> {
           opp_id: c.input.opp_id,
           ...(c.input.meeting_context ? { meeting_context: c.input.meeting_context } : {}),
         },
-        { loader, scopeParams: toScopeParams(c.scope_params) },
+        {
+          loader,
+          scopeParams: toScopeParams(c.scope_params),
+          actor: { type: "system", id: "eval-runner" },
+        },
       );
       const output = result.output as BriefOutputForEval;
 

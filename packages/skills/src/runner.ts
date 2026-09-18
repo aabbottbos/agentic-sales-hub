@@ -130,6 +130,12 @@ export async function runSkill(
           `writeArtifact() is not called for output whose citations do not resolve`,
       );
     }
+    if (!ctx.actor) {
+      throw new Error(
+        `${id}: missing ctx.actor, required to persist an artifact — every write into ` +
+          `context/accounts/** must be attributable`,
+      );
+    }
     const rendered = renderArtifactBody(id, result.output);
     const written = await ctx.loader.writeArtifact({
       accountSlug: mustParam(ctx.scopeParams.accountSlug, "accountSlug"),
@@ -140,6 +146,7 @@ export async function runSkill(
       body: rendered.body,
       citations: rendered.citations,
       unsourcedClaims: rendered.unsourcedClaims,
+      actor: ctx.actor,
     });
     artifactPath = written.artifactPath;
   }
