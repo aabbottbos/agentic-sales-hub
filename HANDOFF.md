@@ -1,13 +1,16 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-17** (Intent 005 — team steel thread — intent, spec,
-and plan all committed; implementation starting. WI-2 / intent 004
-(`call-prep` + the write path) **shipped to `main`** via PR #21 — merged into
-this branch. Intent 005 inserts ahead of WI-3 (`proposal-draft`) in the work
-chain — see "Intent 005" section below).
+Last updated: **2026-09-18** (Intent 005 — team steel thread — all 12 plan
+tasks implemented, committed, and reviewed on `intent/005-team-steel-thread`.
+**Not yet mergeable**: the final full-regression eval run
+(`pnpm eval --suite all --write-results`) is blocked on an external Anthropic
+API credit-balance issue in this environment — see "Next action" below. WI-2 /
+intent 004 (`call-prep` + the write path) **shipped to `main`** via PR #21 —
+merged into this branch. Intent 005 inserts ahead of WI-3 (`proposal-draft`)
+in the work chain — see "Intent 005" section below).
 
-## Intent 005 — team steel thread (spec + plan committed, implementation starting)
+## Intent 005 — team steel thread (implementation complete, reviewed; eval regression run outstanding)
 
 **Why this exists:** a same-day pivot from single-seller to team/org support
 (see `TEAM FOCUS.md`, uncommitted, at repo root — onboarding acceleration,
@@ -59,9 +62,31 @@ surface):**
    Task 5) — a small, additive amendment to spec 005's Skill contract
    section, not a full contract rewrite.
 
-**Next action:** Task 0 (branch sync) is done (commit `7614e2e`). Start Task 1
-(`Actor` type + `artifact.json`/`outcome.json` schema changes + `SCHEMA_VERSION`
-bump to `1.1.0`) — see `docs/plans/005-team-steel-thread.md`.
+**All 12 plan tasks are done, committed, and reviewed** (spec compliance +
+code quality) as of 2026-09-18: Task 1 `372ae74`, Task 2 `e7e3b9b`, Task 3
+`e58e33e`, Task 4 `325fb1d` (plus unrelated lint fix `35a4cf6`), Task 5
+`85f9650`, Task 6 `e66f971`, Task 7 `cd35088`, Task 8 `f18cd0c`, Task 9
+`3e02d8e`, Task 10 `3ef6710`, Task 11 `d0635dd` + follow-up `57e9be3`, Task 12
+(this docs/CI pass). `pnpm typecheck && pnpm test && pnpm build && pnpm lint`
+are green throughout.
+
+**Next action — the one open item before this branch can be considered fully
+verified and merge-ready:** the plan's Verification section calls for a full
+`pnpm eval --suite all --write-results` run and a newly committed
+`evals/results/<date>-<sha>.json` showing no net regression (including the new
+`watcher-trigger` suite). That run is currently **blocked on an external
+Anthropic API credit-balance issue** in this environment — confirmed genuinely
+external (a direct `curl` to the Anthropic API reproduces the same failure
+outside any of this repo's code), not a bug in the eval harness or the skills.
+No new `evals/results/` file has been committed for this branch's work yet.
+Before merging this branch: (1) top up the Anthropic API credit balance used
+by this environment/`ANTHROPIC_API_KEY`, (2) re-run
+`pnpm eval --suite all --write-results` from `intent/005-team-steel-thread`,
+(3) commit the resulting `evals/results/<date>-<sha>.json`, confirm
+`regression_verdict: PASS` and all hard gates green (`sow-review` blocker
+recall 1.00, `find-evidence` recall ≥0.90, `call-summary`/`call-prep` citation
+validity 1.00, `watcher-trigger` passing), then proceed to PR/merge. Do not
+treat intent 005 as shipped/merged until this step is done.
 
 ## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
 
@@ -161,7 +186,7 @@ All six Phase 0 intent success criteria are met.
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
 | CI | `.github/workflows/` | done — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`. |
 | Review policy | `REVIEW.md`, `.github/pull_request_template.md`, `.github/CODEOWNERS` | done |
-| MCP server | `packages/mcp-agentic-sales-hub` | **implementation starting** (this session, plan `docs/plans/005-team-steel-thread.md`, Task 1 onward). No `@modelcontextprotocol/sdk` dependency yet — added in plan Task 7. |
+| MCP server | `packages/mcp-agentic-sales-hub` | **done** (plan `docs/plans/005-team-steel-thread.md`, Tasks 7–10) — two tools (`call-prep`, `call-summary`) wrapping `runSkill()`, plus an in-process file watcher on `inbound/**` auto-triggering `call-summary` under sentinel actor `system:file-watcher`. Reviewed; full-corpus eval verification still outstanding (see "Next action"). |
 
 ## Key mechanics to know
 
@@ -179,13 +204,15 @@ All six Phase 0 intent success criteria are met.
   `pnpm skills:sync`. CI runs `pnpm skills:sync:check` — a drift fails the build.
 - **`writeArtifact()` mints artifact ids via `flag: "wx"`** (collision-safe by
   construction); **`appendOutcome()`'s `appendFile` has no equivalent guard**
-  — discovered during intent 005's investigation. Fix in progress: plan
-  005 Task 6 wraps both in a per-opportunity in-process queue inside
-  `context-core`'s `createLoader()`, proven by a concurrency test rather than
-  a standalone `flag`-style fix (spec 005 resolved OQ #5 — the queue
-  subsumes this). Neither function does anything at the git layer (no
-  commit, no lock) — two processes writing to the same opportunity could
-  interleave until Task 6 lands.
+  — discovered during intent 005's investigation. **Fixed (plan 005 Task 6,
+  `e66f971`):** both now route through a per-opportunity in-process queue
+  wired into `context-core`'s `createLoader()`
+  (`src/concurrency/opportunity-queue.ts`), proven by a concurrency test
+  rather than a standalone `flag`-style fix (spec 005 OQ #5 resolved — the
+  queue subsumes this). Scoped to one loader instance's lifetime — neither
+  function does anything at the git layer (no commit, no lock), so two
+  *separate processes* writing to the same opportunity can still interleave;
+  that remains explicitly out of scope (single-process mutex only, per spec).
 - **`resolveContextRoot()` precedence**: `opts.root` → `ASH_CONTEXT_ROOT` →
   `ash.config.json` `contextRoot` → `./context`. An empty `context/` is valid.
 
@@ -239,10 +266,33 @@ All six Phase 0 intent success criteria are met.
    chain.
 10. **WI-2 merged to `main` via PR #21 (`98a6e74`), 2026-09-17.** No longer a
     blocker — intent 005's implementation (plan `docs/plans/005-team-steel-thread.md`)
-    is underway on top of it. The `intent/005-team-steel-thread` branch was cut
-    before this merge and needed its own catch-up merge (`7614e2e`) before
-    Task 1 could start — worth checking `git merge-base HEAD origin/main` on
-    any long-lived feature branch before assuming it has the latest merged work.
+    is now complete on top of it (all 12 tasks done, see "Intent 005" section).
+    The `intent/005-team-steel-thread` branch was cut before this merge and
+    needed its own catch-up merge (`7614e2e`) before Task 1 could start —
+    worth checking `git merge-base HEAD origin/main` on any long-lived
+    feature branch before assuming it has the latest merged work.
+11. **Intent 005's final eval regression run is blocked, not skipped** — an
+    external Anthropic API credit-balance issue in this environment, verified
+    via direct `curl` to the Anthropic API outside this repo's code. No
+    `evals/results/` file has been committed for this branch yet. See the
+    "Next action" section at the top of this file for the exact 3-step
+    unblock sequence (top up credits → `pnpm eval --suite all
+    --write-results` → commit the result). This is the one thing standing
+    between "implementation complete and reviewed" and "mergeable."
+12. **Taint-ledger short-phrase matching is a genuine, if narrow, gap** —
+    surfaced during Task 9's review (`packages/context-core/src/quarantine/taint.ts`,
+    the `match()` function's case 3). The ledger catches long (8-word)
+    shingle overlaps and whole-shingle substrings reliably, but its
+    3–7-word "short lifted phrase" branch does plain substring containment
+    against normalized shingles — common short phrases risk false positives,
+    and a phrase reworded just enough to cross shingle boundaries risks a
+    false negative. Pre-existing (not introduced by intent 005 — Task 9's
+    `assertNotTainted` just calls the existing `match()`), and not a blocker
+    for the steel thread's own scope, but worth a dedicated look (e.g.
+    stemming/normalization tuning, or a length-scaled threshold) next time
+    anyone is in the quarantine/taint code, since it's the one hook standing
+    between an untrusted `inbound/**` document and a laundered write into
+    `context/accounts/**`.
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
@@ -254,7 +304,7 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
 | **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (PR #21, `98a6e74`) |
-| **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | intent, spec, and plan committed; **implementation underway** (`docs/plans/005-team-steel-thread.md`, Task 1 onward). Inserted ahead of WI-3. |
+| **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **implementation complete, all 12 tasks done and reviewed** (`docs/plans/005-team-steel-thread.md`). Not yet merged — final `pnpm eval --suite all --write-results` regression run is outstanding, blocked on an external Anthropic API credit-balance issue (see "Next action" above). Inserted ahead of WI-3. |
 | **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 006 (renumbered from 005) | not started |
 | **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 007 (renumbered from 006) | not started — scope may shrink or merge with intent 005, per open question 2 |
 | **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 008 (renumbered from 007) | not started |

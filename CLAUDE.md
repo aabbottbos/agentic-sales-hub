@@ -12,8 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `evals/` — scorers, labeled cases, `pnpm eval --suite <…>`, and the injection harness. All six Phase 0 success criteria pass.
 - `.claude/hooks/` — quarantine + protect-paths (PreToolUse), format-on-write (PostToolUse); `.claude/settings.json` registers them.
 - `.github/workflows/` — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`.
+- `packages/mcp-agentic-sales-hub` — the team-steel-thread MCP server (intent/plan 005). A thin wrapper, not a new skill: two MCP tools (`call-prep`, `call-summary`) that call the existing `runSkill()`/`writeArtifact()` path with a required `actor`, plus an in-process file watcher on `inbound/**` that auto-triggers `call-summary` under a fixed sentinel actor (`system:file-watcher`) with no human in the loop. Concurrent writes to one opportunity serialize through a per-opportunity queue in `context-core` (`writeArtifact`/`appendOutcome` route through it for every caller, not just the MCP server).
 
-Not yet built (Phase 1+): `packages/mcp-agentic-sales-hub`, `apps/surface/`, `proposal-draft`, `context/legal/templates/`, most of the spec §10 corpus.
+Not yet built (Phase 1+): `apps/surface/`, `proposal-draft`, `context/legal/templates/`, most of the spec §10 corpus; the remaining `packages/mcp-agentic-sales-hub` scope beyond the steel thread (`context.read/search`, `trace.get`).
 
 Two documents are the source of truth and should be read before any non-trivial work:
 
@@ -36,7 +37,7 @@ These come from the spec and are not negotiable without a T2 change (intent → 
 2. **Everything is a file with typed frontmatter; git is the store.** No database in v1.
 3. **Two mutability classes.** *Canonical* context (`context/org/**`, `context/legal/**`, `context/demand-gen/**`) is replaced and versioned through review. *Accumulating* context (`context/accounts/**`) is **append-only** — meeting notes are never rewritten; superseded artifacts are marked, not deleted.
 4. **Provenance is mandatory.** No material claim in a generation artifact without a resolvable citation; anything unsourced is marked `[unsourced]`, not asserted.
-5. **Outcomes are first-class.** Every generated artifact gets an outcome record in `outcomes.jsonl`. Unfilled outcomes are a tracked metric.
+5. **Outcomes are first-class.** Every generated artifact gets an outcome record in `outcomes.jsonl`. Unfilled outcomes are a tracked metric. Every write also carries a required **`actor`** (`{type: "human"|"system", id}`, schema `1.1.0`+) — who or what produced it, including automatic ones (e.g. the inbound watcher's `system:file-watcher`).
 6. **Context grants are declared per skill and enforced at the loader, not by prompt.** `call-prep` cannot read `context/legal/**`; review skills have **no write grant at all** — they return structured findings, a separate step persists them.
 7. **`inbound/**` is untrusted.** Counterparty-supplied documents are quarantined, read-only, and wrapped in untrusted-content delimiters. `context-core.readInbound` is the **only** sanctioned inbound access path — it verifies `source_hash`, wraps the body, and registers taint. The quarantine hook blocks any tool call whose arguments match the taint ledger. See spec §9.
 8. **No real third-party data in the repo, ever.** `pnpm check:no-real-data` fails on any account slug outside the synthetic namespace (`meridian-` / `acme-` / `northwind-` / `globex-` / `initech-`) or any context file missing `fictional: true`.
@@ -91,21 +92,24 @@ Node 22 (`.nvmrc`); local dev on 24+ is allowed. `pnpm` via corepack.
 
 ## Architecture
 
-Claude Code is the dev environment, the Claude Agent SDK is the runtime (Phase 1+), MCP is the interface between the agent core and everything else (Phase 1+).
+Claude Code is the dev environment; the Claude Agent SDK is the runtime (Phase 1+); MCP is now live as the interface for `call-prep`/`call-summary` (`packages/mcp-agentic-sales-hub`), with the rest of the agent-core surface still Phase 1+.
 
 ```
 packages/context-core    loader + security boundary: schema validation, scope
                          resolution, provenance, append-only, quarantine/taint,
-                         writeFindings, appendOutcome, validateCorpus
+                         writeFindings, appendOutcome, validateCorpus,
+                         per-opportunity write queue
 packages/skills           YAML skill definitions (data — one file drives the
-                          Claude Code skill, the future MCP tool, the eval runner)
-                          + deterministic impls + runSkill
+                          Claude Code skill, the MCP tool, the eval runner)
+                          + deterministic + LLM-backed impls + runSkill
+packages/mcp-agentic-sales-hub   MCP server: call-prep + call-summary tools,
+                          inbound file watcher (auto-triggers call-summary)
 evals/                    scorers · labeled cases · runner · injection-harness
 context/schema/           17 JSON Schemas — the published context spec
 examples/demo-corpus/     the synthetic corpus
 .claude/hooks/            quarantine-inbound, protect-paths, format-on-write
 --- Phase 1+ ---
-packages/mcp-agentic-sales-hub    MCP server (context.read/search, artifact.write, skill.run, trace.get)
+packages/mcp-agentic-sales-hub    remaining scope: context.read/search, trace.get
 apps/surface/             thin Next.js surface: context editor, trace viewer, eval board
 ```
 
