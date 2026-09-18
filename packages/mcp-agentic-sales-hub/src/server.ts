@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerCallPrepTool } from "./tools/call-prep-tool.js";
+import { registerCallSummaryTool } from "./tools/call-summary-tool.js";
 
 /**
  * Package version is not read from package.json at runtime (no JSON import
@@ -12,8 +13,8 @@ const SERVER_VERSION = "0.0.0";
 /**
  * Builds the Agentic Sales Hub MCP server.
  *
- * Registers `call-prep` (plan 005, Task 8). Task 9 adds `call-summary` as an
- * MCP tool; Task 10 adds the inbound file watcher. Neither lives here yet.
+ * Registers `call-prep` (plan 005, Task 8) and `call-summary` (Task 9).
+ * Task 10 adds the inbound file watcher, which does not live here yet.
  */
 export function createServer(): McpServer {
   const server = new McpServer({
@@ -22,6 +23,7 @@ export function createServer(): McpServer {
   });
 
   registerCallPrepTool(server);
+  registerCallSummaryTool(server);
 
   return server;
 }

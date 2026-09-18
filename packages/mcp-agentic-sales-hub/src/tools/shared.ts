@@ -67,3 +67,30 @@ export const actorInputSchema = z.object({
   type: z.enum(["human", "system"]),
   id: z.string().min(1),
 });
+
+/**
+ * In-process equivalent of `.claude/hooks/quarantine-inbound.ts` (a
+ * Claude-Code `PreToolUse` hook) for this separate MCP server process, which
+ * that hook does not wrap (spec 005 JC#3). Call this immediately before any
+ * `writeArtifact`/`appendOutcome` call whose content could contain material
+ * lifted from a quarantined `inbound/**` document (e.g. `call-summary`'s
+ * rendered body, now that its read grant covers `inbound/**` — plan 005 Task
+ * 5) — never persist a write this rejects.
+ *
+ * Checks each given value against the taint ledger via `loader.isTainted()`
+ * and throws on the first match, naming which value (by index) and what
+ * matched, so a caller checking multiple granular values (e.g. per-citation
+ * quotes) gets an actionable diagnostic rather than just "something in here
+ * is tainted".
+ */
+export async function assertNotTainted(loader: ContextLoader, ...values: string[]): Promise<void> {
+  for (const [i, value] of values.entries()) {
+    const match = await loader.isTainted(value);
+    if (match) {
+      throw new Error(
+        `assertNotTainted: value[${i}] matches quarantined content from ` +
+          `"${match.sourcePath}" (matched text: ${JSON.stringify(match.matchedText.slice(0, 120))}) — refusing to persist`,
+      );
+    }
+  }
+}
