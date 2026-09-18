@@ -59,8 +59,9 @@ surface):**
    Task 5) — a small, additive amendment to spec 005's Skill contract
    section, not a full contract rewrite.
 
-**Next action:** execute the plan's Task 0 (sync this branch with
-`origin/main` — done, this merge) then Task 1 onward.
+**Next action:** Task 0 (branch sync) is done (commit `7614e2e`). Start Task 1
+(`Actor` type + `artifact.json`/`outcome.json` schema changes + `SCHEMA_VERSION`
+bump to `1.1.0`) — see `docs/plans/005-team-steel-thread.md`.
 
 ## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
 
@@ -142,8 +143,8 @@ Amendment §3. Env var `DEAL_DESK_TAINT_LEDGER` → `ASH_TAINT_LEDGER` landed in
 both the quarantine hook and the injection harness (`injection: PASS` confirms).
 Schema `$id` base is now `https://agentic-sales-hub.dev/schema/`.
 
-- `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green (verified this session on a fresh clone check; the only local failure encountered was `.obsidian/` tripping Prettier, fixed via `.gitignore` on `intent/004-call-prep-write-path`, commit `b0d3cb5` — **not yet on `main`**, carried by WI-2's branch).
-- `pnpm eval --suite all` — all gates pass as of the last committed result on `main` (`evals/results/2026-09-11-f82c7a7.json`); WI-2's branch has its own newer calibration runs, not yet merged.
+- `pnpm install && pnpm typecheck && pnpm test && pnpm build && pnpm lint` — all green as of WI-2's merge (PR #21, `98a6e74`) into `main`.
+- `pnpm eval --suite all` — all gates pass as of `evals/results/2026-09-11-59e5e45.json` (WI-2's merged result, includes `call-prep` for the first time).
 - `pnpm corpus:validate` / `pnpm check:no-real-data` — clean.
 
 All six Phase 0 intent success criteria are met.
@@ -155,12 +156,12 @@ All six Phase 0 intent success criteria are met.
 | Context loader / security boundary | `packages/context-core/` | done — `createLoader()` is the entrypoint (`src/loader.ts`). `writeArtifact()`/`appendOutcome()` on `main` today lack actor identity and (for `appendOutcome`) any collision guard — intent 005's target. |
 | Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12) on `main`; `brief-output.json` lands with WI-2. `context/schema/README.md` is the path→schema table. |
 | Synthetic corpus | `examples/demo-corpus/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. |
-| Skills | `packages/skills/` | `find-evidence` + `sow-review` deterministic (ADR `docs/decisions/0001`); `call-summary` LLM-backed, merged. `call-prep` LLM-backed, implementation-complete on WI-2's branch, not yet merged. |
-| Eval harness | `evals/` | done on `main` for the merged skills; WI-2's branch adds `runCallPrepSuite()` (mutates a scratch corpus copy, not `examples/demo-corpus/` directly). |
+| Skills | `packages/skills/` | `find-evidence` + `sow-review` deterministic (ADR `docs/decisions/0001`); `call-summary` and `call-prep` LLM-backed, both merged to `main`. `call-prep` is the first skill with a write grant. |
+| Eval harness | `evals/` | done on `main`, including `runCallPrepSuite()` (mutates a scratch corpus copy, not `examples/demo-corpus/` directly). |
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
 | CI | `.github/workflows/` | done — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`. |
 | Review policy | `REVIEW.md`, `.github/pull_request_template.md`, `.github/CODEOWNERS` | done |
-| MCP server | `packages/mcp-agentic-sales-hub` | **not started** — no `@modelcontextprotocol/sdk` dependency exists yet. Target of intent 005 (steel-thread scope) and WI-4 (full scope). |
+| MCP server | `packages/mcp-agentic-sales-hub` | **implementation starting** (this session, plan `docs/plans/005-team-steel-thread.md`, Task 1 onward). No `@modelcontextprotocol/sdk` dependency yet — added in plan Task 7. |
 
 ## Key mechanics to know
 
@@ -178,11 +179,13 @@ All six Phase 0 intent success criteria are met.
   `pnpm skills:sync`. CI runs `pnpm skills:sync:check` — a drift fails the build.
 - **`writeArtifact()` mints artifact ids via `flag: "wx"`** (collision-safe by
   construction); **`appendOutcome()`'s `appendFile` has no equivalent guard**
-  — discovered during intent 005's investigation, not yet fixed (see open
-  question 4 above). Neither function does anything at the git layer (no
-  commit, no lock) — two processes writing to the same opportunity today can
-  interleave. This is the concrete gap intent 005 closes for the single-server
-  case.
+  — discovered during intent 005's investigation. Fix in progress: plan
+  005 Task 6 wraps both in a per-opportunity in-process queue inside
+  `context-core`'s `createLoader()`, proven by a concurrency test rather than
+  a standalone `flag`-style fix (spec 005 resolved OQ #5 — the queue
+  subsumes this). Neither function does anything at the git layer (no
+  commit, no lock) — two processes writing to the same opportunity could
+  interleave until Task 6 lands.
 - **`resolveContextRoot()` precedence**: `opts.root` → `ASH_CONTEXT_ROOT` →
   `ash.config.json` `contextRoot` → `./context`. An empty `context/` is valid.
 
@@ -217,30 +220,29 @@ All six Phase 0 intent success criteria are met.
    as a new work item (outcome-weighted retrieval + evidence reuse rate as a
    gated metric) but doesn't slot it into the WI chain, and doesn't yet
    account for intent 005 either.
-7. **WI-4's intent (006, not yet written) must carry the closed-deal
-   requirement**: ≥2 of the added opportunities close (won/lost) with
-   artifacts + `outcomes.jsonl` populated, not just more meeting notes. May
-   also absorb or be reshaped by intent 005's MCP-server scope — resolve at
-   intent-005-spec time (open question 2).
+7. **WI-4's intent (007, not yet written) — resolved not to carry the
+   closed-deal requirement bundled with intent 005.** Corpus expansion (§10)
+   stays a separate, later work item, per spec 005's resolved OQ #2 — it does
+   not fold into 005's MCP-server scope. The ≥2-closed-opportunities
+   requirement itself is still real and still belongs on whatever intent
+   ends up covering corpus expansion.
 8. **Two-layer packaging / demo video** — not scoped as a WI yet. Likely rides
    on WI-5's README rewrite plus a standalone demo video, needed before
    October per the North Star's sequencing inversion (§7).
 9. **Blocking generation-quality gate — deliberately deferred, not closed**
    (spec 004 Judgment call #6, ratified at spec review 2026-09-11). Both
-   `call-summary` and `call-prep` ship (or will ship, on merge) with only
-   citation validity as a blocking gate; the rubric is advisory/tracked only.
-   Revisit once either a stabler judge setup exists or the golden set is
-   large enough that one case can't dominate the aggregate. Flagged for
-   `proposal-draft` (WI-3) planning time — still applies now that WI-3 sits
-   behind intent 005 in the chain.
-10. **WI-2's branch (`intent/004-call-prep-write-path`) is implementation-
-    complete but not yet merged to `main`.** All 15 plan tasks done, eval
-    calibration run 3x, citation validity 1.00 every run. Needs a PR opened
-    and merged before intent 005's spec work can safely assume `writeArtifact()`
-    exists on `main` — intent 005's mutex/serialization task wraps
-    `writeArtifact()`, which only exists post-WI-2. **Recommend merging WI-2
-    before starting intent 005's spec**, even though 005 now precedes WI-3 in
-    priority — the dependency is on WI-2's code, not WI-3's.
+   `call-summary` and `call-prep` ship with only citation validity as a
+   blocking gate; the rubric is advisory/tracked only. Revisit once either a
+   stabler judge setup exists or the golden set is large enough that one
+   case can't dominate the aggregate. Flagged for `proposal-draft` (WI-3)
+   planning time — still applies now that WI-3 sits behind intent 005 in the
+   chain.
+10. **WI-2 merged to `main` via PR #21 (`98a6e74`), 2026-09-17.** No longer a
+    blocker — intent 005's implementation (plan `docs/plans/005-team-steel-thread.md`)
+    is underway on top of it. The `intent/005-team-steel-thread` branch was cut
+    before this merge and needed its own catch-up merge (`7614e2e`) before
+    Task 1 could start — worth checking `git merge-base HEAD origin/main` on
+    any long-lived feature branch before assuming it has the latest merged work.
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
@@ -251,8 +253,8 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 |---|---|---|---|---|
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
-| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **implementation-complete, not merged** (branch `intent/004-call-prep-write-path`) |
-| **Team steel thread** | Actor identity; single-process write serialization; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **intent filed** (issue #22), spec not started. Inserted ahead of WI-3 this session — depends on WI-2 merging first (see follow-up #10). |
+| **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (PR #21, `98a6e74`) |
+| **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | intent, spec, and plan committed; **implementation underway** (`docs/plans/005-team-steel-thread.md`, Task 1 onward). Inserted ahead of WI-3. |
 | **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 006 (renumbered from 005) | not started |
 | **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 007 (renumbered from 006) | not started — scope may shrink or merge with intent 005, per open question 2 |
 | **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 008 (renumbered from 007) | not started |
@@ -265,8 +267,7 @@ Confirm actual intent numbers against `docs/intent/` before writing new specs;
 this table is a planning aid, not the source of truth for filenames.
 
 **WI-1 must land before WI-4/steel-thread** — done, satisfied. **WI-2 must
-land before the steel thread's spec work begins** — not yet satisfied, see
-follow-up #10.
+land before the steel thread's spec work begins** — done, satisfied (PR #21).
 
 ### Shared contracts to read before touching any WI (amendment §5)
 
@@ -338,17 +339,16 @@ correction):** `findings/write-findings.ts`, `outcomes/append-outcome.ts`, and
 one direct read in `evals/runner/run-suite.ts` had the identical `repoRoot`
 bug as the spec's named functions. Fixed in the same PR.
 
-## WI-2 — call-prep + the write path — IMPLEMENTATION COMPLETE, NOT MERGED
+## WI-2 — call-prep + the write path — SHIPPED (PR #21, `98a6e74`)
 
-Branch `intent/004-call-prep-write-path`. All 15 plan tasks done; intent doc
-merged to `main` (PR #20, `d1bb307`) but **the implementation PR is still
-open** — see follow-up #10 above for why this blocks intent 005's spec work.
+All 15 plan tasks done; intent doc (PR #20, `d1bb307`) and implementation
+(PR #21) both merged to `main`, 2026-09-17.
 
 The second LLM-backed generation skill, and the first skill with a write
 grant — `writeArtifact()` persists its output as a new artifact and opens an
 `unused` outcome record automatically.
 
-**Key outcomes (on the branch, pending merge):**
+**Key outcomes:**
 - `packages/skills/src/impl/{brief-schema,call-prep,call-prep.prompt}.ts` —
   wide read grant (`context/org/**`, `context/demand-gen/**` beyond the
   opportunity's own scope), same `impl/llm.ts` seam as `call-summary`.
@@ -370,5 +370,6 @@ grant — `writeArtifact()` persists its output as a new artifact and opens an
 advisory, same rationale as A1. 3 live calibration runs: citation validity
 1.00 every run.
 
-**Next action on this branch:** open a PR, get it merged to `main`, before
-intent 005's spec/plan work assumes `writeArtifact()` is present on `main`.
+**Next action:** none — superseded by intent 005's implementation, now
+underway on top of this (see "Team steel thread" in the work chain above and
+`docs/plans/005-team-steel-thread.md`).
