@@ -1,0 +1,7 @@
+{
+  "id": "acme-auto-transcript",
+  "skill": "watcher-trigger",
+  "fixture": "2026-09-17-acme-auto-transcript.inbound.md",
+  "scope_params": { "account_slug": "acme-logistics", "opp_id": "006Ax0000GkLmNpQAA" },
+  "expected_actor": { "type": "system", "id": "file-watcher" }
+}

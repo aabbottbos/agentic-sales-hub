@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@agentic-sales-hub/context-core": "workspace:*",
-    "@agentic-sales-hub/skills": "workspace:*"
+    "@agentic-sales-hub/mcp-agentic-sales-hub": "workspace:*",
+    "@agentic-sales-hub/skills": "workspace:*",
+    "@modelcontextprotocol/sdk": "~1.30.0"
   }
 }

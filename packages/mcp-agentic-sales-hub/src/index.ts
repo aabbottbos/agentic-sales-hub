@@ -7,6 +7,15 @@ import { createServer, startInboundWatcher, startServer } from "./server.js";
 export { createInboundWatcher, FILE_WATCHER_ACTOR } from "./watcher.js";
 export type { CreateInboundWatcherOptions, InboundWatcher } from "./watcher.js";
 
+// Re-exported (Task 11) so the eval suite can drive call-summary through an
+// actual registered MCP tool handler for the "once via an MCP tool call"
+// variant spec 005's Eval-impact section calls for, and share this process's
+// single loader construction (getSharedLoader/resetSharedLoaderForTests) the
+// same way every tool handler in this package does — rather than the eval
+// suite building its own separate ContextLoader for this one case.
+export { registerCallSummaryTool } from "./tools/call-summary-tool.js";
+export { getSharedLoader, resetSharedLoaderForTests } from "./tools/shared.js";
+
 async function main(): Promise<void> {
   const server = createServer();
   // Sharing the same getSharedLoader()-cached ContextLoader instance the

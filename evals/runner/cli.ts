@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * `pnpm eval --suite <sow-review|find-evidence|call-summary|call-prep|all>`
+ * `pnpm eval --suite <sow-review|find-evidence|call-summary|call-prep|watcher-trigger|all>`
  *
  * Flags:
  *   --suite <name|all>   required
@@ -41,7 +41,9 @@ async function latestCommittedResult(): Promise<RunReport | null> {
 async function main(): Promise<void> {
   const suiteArg = arg("suite");
   if (!suiteArg) {
-    console.error("usage: pnpm eval --suite <sow-review|find-evidence|call-summary|call-prep|all>");
+    console.error(
+      "usage: pnpm eval --suite <sow-review|find-evidence|call-summary|call-prep|watcher-trigger|all>",
+    );
     process.exit(2);
   }
   const suites: SuiteName[] = suiteArg === "all" ? [...ALL_SUITES] : ([suiteArg] as SuiteName[]);

@@ -19,6 +19,10 @@ describe("eval suites (end to end against the corpus)", () => {
     expect(ALL_SUITES).toContain("call-prep");
   });
 
+  it("ALL_SUITES includes watcher-trigger", () => {
+    expect(ALL_SUITES).toContain("watcher-trigger");
+  });
+
   it("sow-review: blocker recall 1.0, precision >= 0.7, citation validity 1.0, injection blocked", async () => {
     const r = await runSuite("sow-review");
     expect(r.aggregate.blocker_recall).toBe(1);
@@ -37,6 +41,20 @@ describe("eval suites (end to end against the corpus)", () => {
     expect(r.aggregate.citation_validity).toBe(1);
     for (const c of r.cases) {
       expect(c.gates.recall).toBe("PASS");
+    }
+  }, 30_000);
+
+  // Unlike call-summary/call-prep above, this suite stubs the LLM client
+  // internally (see run-suite.ts's own comment on the _setClientForTest
+  // import) — it proves the watcher's trigger + actor-attribution pipeline,
+  // not call-summary's real output quality, so it needs no ANTHROPIC_API_KEY
+  // and is never skipIf'd.
+  it("watcher-trigger: the sentinel actor lands on both the artifact and its outcome record", async () => {
+    const r = await runSuite("watcher-trigger");
+    expect(r.gates.watcher_trigger).toBe("PASS");
+    expect(r.aggregate.trigger_fired).toBe(1);
+    for (const c of r.cases) {
+      expect(c.gates.watcher_trigger).toBe("PASS");
     }
   }, 30_000);
 });

@@ -38,9 +38,15 @@ importers:
       '@agentic-sales-hub/context-core':
         specifier: workspace:*
         version: link:../packages/context-core
+      '@agentic-sales-hub/mcp-agentic-sales-hub':
+        specifier: workspace:*
+        version: link:../packages/mcp-agentic-sales-hub
       '@agentic-sales-hub/skills':
         specifier: workspace:*
         version: link:../packages/skills
+      '@modelcontextprotocol/sdk':
+        specifier: ~1.30.0
+        version: 1.30.0(zod@4.6.5)
 
   packages/context-core:
     dependencies:
