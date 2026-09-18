@@ -67,8 +67,14 @@ code quality) as of 2026-09-18: Task 1 `372ae74`, Task 2 `e7e3b9b`, Task 3
 `e58e33e`, Task 4 `325fb1d` (plus unrelated lint fix `35a4cf6`), Task 5
 `85f9650`, Task 6 `e66f971`, Task 7 `cd35088`, Task 8 `f18cd0c`, Task 9
 `3e02d8e`, Task 10 `3ef6710`, Task 11 `d0635dd` + follow-up `57e9be3`, Task 12
-(this docs/CI pass). `pnpm typecheck && pnpm test && pnpm build && pnpm lint`
-are green throughout.
+`89c8963`. A final whole-branch holistic review (beyond the per-task reviews)
+found and closed one more gap: `writeFindings()` (the `sow-review` findings
+persistence path) had been missed by Task 3's actor-threading and Task 6's
+queue-wrapping — it hardcoded a fake `system/sow-review` actor into every
+findings artifact and wasn't queue-serialized. Fixed in `42e3aef`, mirroring
+Task 3's precedent exactly; no production caller existed yet, so this broke
+nothing. `pnpm typecheck && pnpm test && pnpm build && pnpm lint` are green
+throughout, including after this fix.
 
 **Next action — the one open item before this branch can be considered fully
 verified and merge-ready:** the plan's Verification section calls for a full
@@ -293,6 +299,21 @@ All six Phase 0 intent success criteria are met.
     anyone is in the quarantine/taint code, since it's the one hook standing
     between an untrusted `inbound/**` document and a laundered write into
     `context/accounts/**`.
+13. **`writeFindings`'s default artifact-id minting has no collision-retry
+    loop** — surfaced while writing `42e3aef`'s queue-interleaving test
+    (`packages/context-core/src/findings/write-findings.ts`'s `shortId()`,
+    derived from the injected clock: `now.getTime().toString(36).slice(-6)`).
+    Unlike `writeArtifact`'s `mintNextId` + `MAX_MINT_ATTEMPTS`/EEXIST-retry
+    pattern (`write-path.ts`), concurrent `writeFindings` calls under a
+    frozen clock deterministically collide and throw
+    `AppendOnlyViolationError`. Confirmed pre-existing on `main`, not
+    introduced by intent 005 — Task 6's queue wrapping doesn't touch id
+    minting, it only serializes calls, so this can still surface under a
+    real (non-frozen) clock if two `writeFindings` calls land in the same
+    process-lifetime queue window with a coarse enough clock resolution.
+    Not fixed here (out of scope for the actor/queue fix that found it); a
+    small follow-up would copy `writeArtifact`'s mint-and-retry loop into
+    `write-findings.ts`.
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
