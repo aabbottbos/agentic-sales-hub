@@ -45,10 +45,13 @@ describe("skill registry", () => {
     expect(def.context_grants.write).toBeUndefined();
   });
 
-  it("call-summary is a generation skill, meetings read grant only, no write grant", async () => {
+  it("call-summary is a generation skill, meetings + inbound read grant, no write grant", async () => {
     const def = await loadSkill("call-summary");
     expect(def.tier).toBe("generation");
-    expect(def.context_grants.read).toEqual(["context/accounts/*/opportunities/*/meetings/**"]);
+    expect(def.context_grants.read).toEqual([
+      "context/accounts/*/opportunities/*/meetings/**",
+      "context/accounts/*/opportunities/*/inbound/**",
+    ]);
     expect(def.context_grants.write).toBeUndefined();
     expect(def.tools).toEqual(["context.read"]);
     expect(def.output.schema).toBe("context/schema/summary-output.json");

@@ -68,7 +68,11 @@ grant widens to also include `context/accounts/*/opportunities/*/inbound/**`,
 and the impl gains a path-shape branch (`meeting_path` under `/inbound/`)
 that calls `ctx.loader.readInbound()` + `extractUntrusted()` instead of
 `ctx.loader.read()`. `CallSummaryInput` stays `{meeting_path: string}` —
-unchanged shape. This is a small, additive grant widening, not a rewrite of
+unchanged shape. **Implemented in plan 005 Task 5:** the grant and impl
+branch landed exactly as described here, because the file-watcher (a later
+task in this same plan) needs `call-summary` to be able to process an
+inbound-quarantined document, which it could not do under the original
+`meetings/**`-only grant. This is a small, additive grant widening, not a rewrite of
 `call-summary`'s inputs/output contract — the "no contract change" invariant
 this section otherwise holds to is about not adding `actor` (or any other
 new required field) to a skill's declared `inputs`, not about read grants
