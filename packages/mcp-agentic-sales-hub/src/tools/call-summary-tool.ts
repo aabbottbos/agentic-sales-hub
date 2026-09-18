@@ -13,10 +13,16 @@ const callSummaryInputShape = {
 
 /** Mirrors `OPP_DIR_RE` in `packages/context-core/src/validate-corpus.ts` —
  *  the existing precedent for pulling `{accountSlug, crmId}` out of a
- *  `context/accounts/<slug>/opportunities/<crmId>/...` path shape. */
+ *  `context/accounts/<slug>/opportunities/<crmId>/...` path shape.
+ *
+ *  Exported (Task 10) because the file watcher (`src/watcher.ts`) is a
+ *  second call site needing the exact same derivation for the same reason
+ *  (deriving `{accountSlug, crmId}` from a `meeting_path` before persisting a
+ *  `call-summary` artifact) — with two consumers, importing beats the
+ *  single-caller duplication precedent `OPP_DIR_RE` itself set here. */
 const OPP_DIR_RE = /^context\/accounts\/([^/]+)\/opportunities\/([^/]+)\//;
 
-function parseOpportunityPath(path: string): { accountSlug: string; crmId: string } {
+export function parseOpportunityPath(path: string): { accountSlug: string; crmId: string } {
   const m = OPP_DIR_RE.exec(path.replaceAll("\\", "/"));
   if (!m) {
     throw new Error(
