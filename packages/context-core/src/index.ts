@@ -85,6 +85,7 @@ export type { AshErrorCode } from "./errors.js";
 
 // Types
 export type {
+  Actor,
   Mutability,
   SkillTier,
   Severity,

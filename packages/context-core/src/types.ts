@@ -8,6 +8,12 @@ export type SkillTier = "retrieval" | "generation" | "review";
 export type Severity = "blocker" | "major" | "minor";
 export type ClausePosition = "preferred" | "acceptable" | "unacceptable";
 
+/** Who or what produced a write — a human operator or a system/skill actor. */
+export interface Actor {
+  type: "human" | "system";
+  id: string;
+}
+
 export type OutcomeKind =
   | "sent"
   | "won"

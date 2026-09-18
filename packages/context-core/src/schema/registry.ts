@@ -15,7 +15,7 @@ const addFormats = ((addFormatsModule as unknown as { default?: unknown }).defau
  * this MAJOR and a MINOR <= this MINOR. A MAJOR bump is breaking (own tier-2 + a
  * corpus-migration PR). See context/schema/README.md.
  */
-export const SCHEMA_VERSION = "1.0.0";
+export const SCHEMA_VERSION = "1.1.0";
 
 /** Schema types keyed by the `$id` basename (without `.json`). */
 export const SCHEMA_TYPES = [

@@ -18,6 +18,15 @@
       "description": "Skill id that produced this, e.g. sow-review, call-prep."
     },
     "superseded": { "type": "boolean", "default": false },
+    "actor": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["human", "system"] },
+        "id": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "id"],
+      "additionalProperties": false
+    },
     "citations": {
       "type": "array",
       "description": "Each material claim resolves to a context file span.",
@@ -55,7 +64,7 @@
       "description": "For kind: findings — sha256 of the reviewed inbound doc body."
     }
   },
-  "required": ["artifact_id", "kind", "generated_by", "superseded", "citations"],
+  "required": ["artifact_id", "kind", "generated_by", "superseded", "actor", "citations"],
   "if": {
     "type": "object",
     "properties": { "kind": { "const": "findings" } },
