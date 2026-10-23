@@ -1,19 +1,62 @@
 # HANDOFF
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
-Last updated: **2026-09-18** (Intent 005 — team steel thread — all 12 plan
-tasks implemented, committed, and reviewed on `intent/005-team-steel-thread`.
-**Not yet mergeable**: the final full-regression eval run
-(`pnpm eval --suite all --write-results`) is blocked on an external Anthropic
-API credit-balance issue in this environment — see "Next action" below. WI-2 /
-intent 004 (`call-prep` + the write path) **shipped to `main`** via PR #21 —
-merged into this branch. Intent 005 inserts ahead of WI-3 (`proposal-draft`)
-in the work chain — see "Intent 005" section below).
+Last updated: **2026-10-23** (Intent 005, the team steel thread, **shipped to
+`main`** via PR #23, `abd59fe`. Full-suite eval result
+`evals/results/2026-10-23-bd991b6.json`: all hard gates pass, no regression.
+**Priority call, 2026-10-23:** keep building capabilities as fast as possible.
+The North Star's October writeup + demo video is deferred, not cancelled.
+Next up: see "Next action" below.)
 
-## Intent 005 — team steel thread (implementation complete, reviewed; eval regression run outstanding)
+## Next action
+
+Build order agreed 2026-10-23 (each its own branch + PR):
+
+1. **Taint-ledger short-phrase hardening** (follow-up 12), T1. Most urgent:
+   the inbound watcher now runs `call-summary` on `inbound/**` unattended.
+   Plan first (`docs/plans/006-...` or the next free number), and add new
+   injection eval cases for reworded and short lifted phrases.
+2. **`writeFindings` mint-and-retry** (follow-up 13), T1. Small.
+3. **Eval baseline tie-break** (follow-up 14), T1. Small.
+4. **Move skills from `claude-sonnet-5` to Sonnet 5.5**, T1. Do 3 calibration
+   runs; citation validity must stay at 1.00.
+5. **Intent 006: `proposal-draft`** (WI-3), T2.
+6. **Intent 007: corpus expansion** with ≥2 closed deals and populated
+   `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
+7. **Intent 008: the compounding loop.** It depends on 007's closed deals.
+8. **Intent 009: adoption layer** (WI-5). Needs the license and public-repo
+   decisions first.
+
+## Intent 005 — team steel thread — SHIPPED (PR #23, `abd59fe`)
+
+**Closing notes (2026-10-23):**
+
+- **The API blocker was a revoked key**, not a credit balance: by 10-23 both
+  local key files returned `invalid x-api-key`. New key installed locally
+  (`.env.local`, `.anthropic-key`) and as the `ANTHROPIC_API_KEY` repo
+  secret.
+- **The first full eval run crashed** on one intermittent `call-prep`
+  citation misquote. `runSkill` correctly refused to persist, but the suite
+  didn't catch the throw, so no results file was written. Fixed in
+  `bd991b6`: `runSkill` now throws a typed `CitationValidityError` listing
+  every unresolved citation, and `runCallPrepSuite` records it as a scored
+  FAIL. The misquote did not reproduce in 3 direct reruns. The gate is
+  unchanged.
+- **The regression check picked the wrong baseline** (follow-up 14). It was
+  verified by hand against the correct one: PASS.
+- **`docs/` had been moved** (byte-identical) to `context/templates/docs/`
+  for an Obsidian vault. It was restored, because `context/templates/` is
+  reserved for tenant output templates (WI-5). `.obsidian/` is now
+  gitignored; to use Obsidian, open the repo root as the vault.
+- **`TEAM FOCUS.md`** is committed as `docs/AgenticSalesHub_TeamFocus_v1.md`.
+  The North Star is committed too, but still needs reconciling with the team
+  pivot.
+- **`.claude/settings.json`:** the `Write` denies on `legal/**` and
+  `evals/golden/**` were dropped (`e261528`). `protect-paths.ts` still blocks
+  both.
 
 **Why this exists:** a same-day pivot from single-seller to team/org support
-(see `TEAM FOCUS.md`, uncommitted, at repo root — onboarding acceleration,
+(see `docs/AgenticSalesHub_TeamFocus_v1.md` — onboarding acceleration,
 manager deal support, trend analysis, CS/Product handoff, and a concrete
 background-agent case: auto-coaching after every discovery call). Rather than
 build out the remaining single-seller skills (`proposal-draft`, corpus
@@ -76,29 +119,12 @@ Task 3's precedent exactly; no production caller existed yet, so this broke
 nothing. `pnpm typecheck && pnpm test && pnpm build && pnpm lint` are green
 throughout, including after this fix.
 
-**Next action — the one open item before this branch can be considered fully
-verified and merge-ready:** the plan's Verification section calls for a full
-`pnpm eval --suite all --write-results` run and a newly committed
-`evals/results/<date>-<sha>.json` showing no net regression (including the new
-`watcher-trigger` suite). That run is currently **blocked on an external
-Anthropic API credit-balance issue** in this environment — confirmed genuinely
-external (a direct `curl` to the Anthropic API reproduces the same failure
-outside any of this repo's code), not a bug in the eval harness or the skills.
-No new `evals/results/` file has been committed for this branch's work yet.
-Before merging this branch: (1) top up the Anthropic API credit balance used
-by this environment/`ANTHROPIC_API_KEY`, (2) re-run
-`pnpm eval --suite all --write-results` from `intent/005-team-steel-thread`,
-(3) commit the resulting `evals/results/<date>-<sha>.json`, confirm
-`regression_verdict: PASS` and all hard gates green (`sow-review` blocker
-recall 1.00, `find-evidence` recall ≥0.90, `call-summary`/`call-prep` citation
-validity 1.00, `watcher-trigger` passing), then proceed to PR/merge. Do not
-treat intent 005 as shipped/merged until this step is done.
-
-## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, uncommitted)
+## The North Star (`docs/AgenticSalesHub_NorthStar_v1.md`, committed)
 
 Governs `Spec_v2.md`, the Adoptability Amendment, and the SDLC Framework —
-when a scope question can't be settled in a spec, it's settled here. Not yet
-`git add`ed; do that in a normal commit when convenient, no rush.
+when a scope question can't be settled in a spec, it's settled here.
+**Sequencing override (2026-10-23):** the user chose build velocity over the
+October writeup; see the header.
 
 **Thesis:** sales work should compound because the context substrate — not
 the CRM — is the system of record; augmenting existing skills with real org
@@ -184,7 +210,7 @@ All six Phase 0 intent success criteria are met.
 
 | Area | Path | State |
 |---|---|---|
-| Context loader / security boundary | `packages/context-core/` | done — `createLoader()` is the entrypoint (`src/loader.ts`). `writeArtifact()`/`appendOutcome()` on `main` today lack actor identity and (for `appendOutcome`) any collision guard — intent 005's target. |
+| Context loader / security boundary | `packages/context-core/` | done — `createLoader()` is the entrypoint (`src/loader.ts`). `writeArtifact()`/`appendOutcome()`/`writeFindings()` require an `actor` and serialize per opportunity (intent 005). |
 | Published context spec | `context/schema/` | done — 17 JSON Schemas (draft 2020-12) on `main`; `brief-output.json` lands with WI-2. `context/schema/README.md` is the path→schema table. |
 | Synthetic corpus | `examples/demo-corpus/` | done — "Minimal + 1 opportunity" (Meridian Grid / Acme Logistics). Fictional; see `CORPUS.md`. |
 | Skills | `packages/skills/` | `find-evidence` + `sow-review` deterministic (ADR `docs/decisions/0001`); `call-summary` and `call-prep` LLM-backed, both merged to `main`. `call-prep` is the first skill with a write grant. |
@@ -192,7 +218,7 @@ All six Phase 0 intent success criteria are met.
 | Enforcement | `.claude/hooks/`, `.claude/settings.json` | done — quarantine-inbound, protect-paths (PreToolUse); format-on-write (PostToolUse). |
 | CI | `.github/workflows/` | done — `ci.yml`, `evals.yml`, `claude.yml`, `claude-review.yml`. |
 | Review policy | `REVIEW.md`, `.github/pull_request_template.md`, `.github/CODEOWNERS` | done |
-| MCP server | `packages/mcp-agentic-sales-hub` | **done** (plan `docs/plans/005-team-steel-thread.md`, Tasks 7–10) — two tools (`call-prep`, `call-summary`) wrapping `runSkill()`, plus an in-process file watcher on `inbound/**` auto-triggering `call-summary` under sentinel actor `system:file-watcher`. Reviewed; full-corpus eval verification still outstanding (see "Next action"). |
+| MCP server | `packages/mcp-agentic-sales-hub` | **done** (plan `docs/plans/005-team-steel-thread.md`, Tasks 7–10) — two tools (`call-prep`, `call-summary`) wrapping `runSkill()`, plus an in-process file watcher on `inbound/**` auto-triggering `call-summary` under sentinel actor `system:file-watcher`. Merged (PR #23). |
 
 ## Key mechanics to know
 
@@ -240,15 +266,12 @@ All six Phase 0 intent success criteria are met.
 3. **HANDOFF vs. amendment numbering** — the amendment's WI chain (intent
    003–007) is authoritative, now reordered by intent 005 — see "The work
    chain" below.
-4. **North Star not yet committed** — `docs/AgenticSalesHub_NorthStar_v1.md`
-   is on disk, untracked. Commit it (plain T0 docs commit) before or alongside
-   the next WI so it's governing in-repo, not just on disk. Also needs
-   reconciling with intent 005's team-focus pivot (see North Star section
-   above).
-5. **`TEAM FOCUS.md` not yet committed** — on disk at repo root, untracked.
-   The source document for intent 005's pivot. Commit it alongside the North
-   Star, or fold its content into the North Star directly, so the team-focus
-   rationale is governing in-repo rather than a loose file.
+4. **North Star needs reconciling with the team pivot.** It's committed now
+   (on `main` via PR #23). It still frames the work as five skills plus the
+   compounding loop for a single seller, and doesn't name multi-user support
+   or background execution.
+5. **Team Focus doc:** done. It's committed as
+   `docs/AgenticSalesHub_TeamFocus_v1.md` (PR #23).
 6. **The compounding loop has no intent number yet.** North Star §10 names it
    as a new work item (outcome-weighted retrieval + evidence reuse rate as a
    gated metric) but doesn't slot it into the WI chain, and doesn't yet
@@ -277,14 +300,9 @@ All six Phase 0 intent success criteria are met.
     needed its own catch-up merge (`7614e2e`) before Task 1 could start —
     worth checking `git merge-base HEAD origin/main` on any long-lived
     feature branch before assuming it has the latest merged work.
-11. **Intent 005's final eval regression run is blocked, not skipped** — an
-    external Anthropic API credit-balance issue in this environment, verified
-    via direct `curl` to the Anthropic API outside this repo's code. No
-    `evals/results/` file has been committed for this branch yet. See the
-    "Next action" section at the top of this file for the exact 3-step
-    unblock sequence (top up credits → `pnpm eval --suite all
-    --write-results` → commit the result). This is the one thing standing
-    between "implementation complete and reviewed" and "mergeable."
+11. **Intent 005's eval regression run:** done. It turned out the old API
+    key had been revoked. After replacing it, the full run passed
+    (`evals/results/2026-10-23-bd991b6.json`) and 005 merged as PR #23.
 12. **Taint-ledger short-phrase matching is a genuine, if narrow, gap** —
     surfaced during Task 9's review (`packages/context-core/src/quarantine/taint.ts`,
     the `match()` function's case 3). The ledger catches long (8-word)
@@ -314,6 +332,20 @@ All six Phase 0 intent success criteria are met.
     Not fixed here (out of scope for the actor/queue fix that found it); a
     small follow-up would copy `writeArtifact`'s mint-and-retry loop into
     `write-findings.ts`.
+14. **The eval baseline picker breaks ties by filename.**
+    `latestCommittedResult()` (`evals/runner/cli.ts`) sorts result filenames
+    lexically, so when two results share a date, the one with the larger
+    short sha wins, not the later commit. On 10-23 this compared against
+    `2026-09-11-f82c7a7` instead of `59e5e45`. Fix it by adding a
+    `generated_at` timestamp to the report and sorting on it. Until then, the
+    bug only bites if two results get committed on the same day.
+15. **`call-prep` occasionally misquotes a citation.** One full run on 10-23
+    produced an unresolvable citation; 3 direct reruns plus 2 later full runs
+    (local and CI) were clean. The gate catches it, and since `bd991b6` it is
+    recorded as a FAIL instead of crashing the run. Track how often it
+    happens. If it keeps recurring, consider having the impl retry once on an
+    unresolvable quote before failing (a skill-contract question, so check
+    the tier).
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
@@ -325,7 +357,7 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 | **WI-0** | Rename to Agentic Sales Hub | T0 | — | **done** (PR #9) |
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
 | **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (PR #21, `98a6e74`) |
-| **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **implementation complete, all 12 tasks done and reviewed** (`docs/plans/005-team-steel-thread.md`). Not yet merged — final `pnpm eval --suite all --write-results` regression run is outstanding, blocked on an external Anthropic API credit-balance issue (see "Next action" above). Inserted ahead of WI-3. |
+| **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **done** (PR #23, `abd59fe`) |
 | **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 006 (renumbered from 005) | not started |
 | **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 007 (renumbered from 006) | not started — scope may shrink or merge with intent 005, per open question 2 |
 | **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 008 (renumbered from 007) | not started |
