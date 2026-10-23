@@ -27,6 +27,7 @@ tool, and the eval runner.
 ## Context read scope
 
   - `context/accounts/*/opportunities/*/meetings/**`
+  - `context/accounts/*/opportunities/*/inbound/**`
 
 ## Output contract
 

@@ -22,8 +22,17 @@
         "unused"
       ]
     },
+    "actor": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["human", "system"] },
+        "id": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "id"],
+      "additionalProperties": false
+    },
     "note": { "type": "string" }
   },
-  "required": ["date", "artifact", "outcome"],
+  "required": ["date", "artifact", "outcome", "actor"],
   "additionalProperties": false
 }

@@ -1,13 +1,16 @@
 ---
 fictional: true
 mutability: accumulating
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 created: "2026-08-20T00:00:00Z"
 title: Proposal draft — Acme Logistics (pre-restructure)
 artifact_id: a-0002
 kind: proposal
 generated_by: proposal-draft
 superseded: true
+actor:
+  type: system
+  id: legacy
 citations:
   - claim: Platform pricing is per operational seat, per partner seat, plus a data-volume minimum.
     path: context/org/pricing.md

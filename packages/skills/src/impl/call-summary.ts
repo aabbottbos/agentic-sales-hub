@@ -42,23 +42,62 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
       detail: `${scopeResolved.length} files (anchored to ${meetingPath})`,
     });
 
-    // Read the one note through the loader. `file.raw` is the whole file,
-    // frontmatter included, LF-normalized — the exact basis `resolveCitation`
-    // slices, so the model's [start, end) offsets resolve without conversion.
-    const file = await ctx.loader.read(meetingPath);
-    const noteText = file.raw;
-    trace.push({ step: "readNote", detail: `${noteText.length} chars` });
+    // Read the one note. A `meetings/**` path goes through the normal reader —
+    // `file.raw` is the whole file, frontmatter included, LF-normalized, the
+    // exact basis `resolveCitation` slices, so the model's [start, end) offsets
+    // resolve without conversion. An `inbound/**` path (the watcher case, spec
+    // 005 amendment) is quarantined: it must go through `readInbound()` so the
+    // taint ledger registers it, then `extractUntrusted()` to recover the plain
+    // body for the prompt — `ctx.loader.read()` alone would skip quarantine
+    // wrapping and taint registration entirely.
+    //
+    // `extractUntrusted` only returns the body (frontmatter stripped), but
+    // `resolveCitation` (the citation-validity gate) always re-reads and slices
+    // the *raw* file from disk, frontmatter included. So a span computed against
+    // the body would land `spanOffset` characters too early once verified. Read
+    // the raw file too (schema/hash-checked, no quarantine bypass — `readOne`
+    // never wraps or taint-registers) purely to compute that offset, and shift
+    // every resolved span by it before returning.
+    const isInbound = meetingPath.includes("/inbound/");
+    let noteText: string;
+    let spanOffset = 0;
+    if (isInbound) {
+      const [{ wrapped }, file] = await Promise.all([
+        ctx.loader.readInbound(meetingPath),
+        ctx.loader.read(meetingPath),
+      ]);
+      noteText = ctx.loader.extractUntrusted(wrapped);
+      spanOffset = file.raw.length - file.body.length;
+      trace.push({
+        step: "readNote",
+        detail: `${noteText.length} chars (inbound, quarantined; span offset ${spanOffset})`,
+      });
+    } else {
+      const file = await ctx.loader.read(meetingPath);
+      noteText = file.raw;
+      trace.push({ step: "readNote", detail: `${noteText.length} chars (meetings)` });
+    }
 
     // Turn each model citation {path, quote} into {path, quote, span} by locating
-    // the quote in the note. A quote that cannot be located verbatim keeps its
-    // shape but gets an out-of-range span so it fails the citation-validity gate
-    // — the honest outcome, the claim was not actually supported.
-    const badSpan: [number, number] = [noteText.length, noteText.length + 1];
+    // the quote in the note text handed to the model, then shifting the span by
+    // `spanOffset` so it lands correctly against the raw file `resolveCitation`
+    // re-reads. A quote that cannot be located verbatim keeps its shape but gets
+    // an out-of-range span so it fails the citation-validity gate — the honest
+    // outcome, the claim was not actually supported.
+    const badSpan: [number, number] = [
+      noteText.length + spanOffset,
+      noteText.length + spanOffset + 1,
+    ];
     const fixCitations = (parsed: unknown): number => {
       let unlocatable = 0;
       const fix = (raw: RawCitation): { path: string; quote: string; span: [number, number] } => {
         const resolved = resolveCitationSpan(noteText, raw);
-        if (resolved) return resolved;
+        if (resolved) {
+          return {
+            ...resolved,
+            span: [resolved.span[0] + spanOffset, resolved.span[1] + spanOffset],
+          };
+        }
         unlocatable++;
         return {
           path: typeof raw.path === "string" ? raw.path : meetingPath,

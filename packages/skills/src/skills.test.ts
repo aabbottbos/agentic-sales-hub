@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
 import * as registry from "./registry.js";
-import { runSkill, validateInput, flattenCitations } from "./runner.js";
+import { runSkill, validateInput, flattenCitations, CitationValidityError } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
 import * as llm from "./impl/llm.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
@@ -45,10 +45,13 @@ describe("skill registry", () => {
     expect(def.context_grants.write).toBeUndefined();
   });
 
-  it("call-summary is a generation skill, meetings read grant only, no write grant", async () => {
+  it("call-summary is a generation skill, meetings + inbound read grant, no write grant", async () => {
     const def = await loadSkill("call-summary");
     expect(def.tier).toBe("generation");
-    expect(def.context_grants.read).toEqual(["context/accounts/*/opportunities/*/meetings/**"]);
+    expect(def.context_grants.read).toEqual([
+      "context/accounts/*/opportunities/*/meetings/**",
+      "context/accounts/*/opportunities/*/inbound/**",
+    ]);
     expect(def.context_grants.write).toBeUndefined();
     expect(def.tools).toEqual(["context.read"]);
     expect(def.output.schema).toBe("context/schema/summary-output.json");
@@ -401,7 +404,11 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
       const result = await runSkill(
         "call-prep",
         { account_slug: "acme-logistics", opp_id: OPP },
-        { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+        {
+          loader: scratchLoader,
+          scopeParams: { accountSlug: "acme-logistics", oppId: OPP },
+          actor: { type: "system", id: "test" },
+        },
       );
 
       expect(result.citationsValid).toBe(true);
@@ -440,13 +447,57 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
       vi.spyOn(llm, "complete").mockResolvedValue(stub);
       const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
 
+      const err = await runSkill(
+        "call-prep",
+        { account_slug: "acme-logistics", opp_id: OPP },
+        { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      ).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(CitationValidityError);
+      expect((err as Error).message).toMatch(/citation validity/i);
+      const { total, failures } = err as CitationValidityError;
+      expect(total).toBe(1);
+      expect(failures).toHaveLength(1);
+      expect(failures[0]).toMatchObject({
+        path: "context/org/company.md",
+        quote: "this exact phrase does not appear anywhere in the corpus",
+      });
+      expect(failures[0]!.reason).toMatch(/unresolvable/i);
+
+      expect(writeArtifactSpy).not.toHaveBeenCalled();
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to persist when ctx.actor is missing — throws before writeArtifact, even though citations are valid", async () => {
+    const { tmpDir, loader: scratchLoader } = await scratchCorpus();
+    try {
+      const raw = await readFile(join(tmpDir, "demo-corpus/org/company.md"), "utf8");
+      const quoteStart = raw.indexOf("Meridian Grid is a mid-market B2B company");
+      const quote = raw.slice(
+        quoteStart,
+        quoteStart + "Meridian Grid is a mid-market B2B company".length,
+      );
+      const citation = { path: "context/org/company.md", quote, span: [0, 0] as [number, number] };
+      const stub = JSON.stringify({
+        goal: "Confirm scope and champion alignment",
+        what_we_know: [{ text: "Meridian sells a supply-chain visibility platform.", citation }],
+        talking_points: [],
+        risks: [],
+        citations: [{ path: "context/org/company.md", quote }],
+        unsourced_claims: [],
+      });
+      vi.spyOn(llm, "complete").mockResolvedValue(stub);
+      const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
+
       await expect(
         runSkill(
           "call-prep",
           { account_slug: "acme-logistics", opp_id: OPP },
           { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
         ),
-      ).rejects.toThrow(/citation validity/i);
+      ).rejects.toThrow(/missing ctx\.actor/i);
 
       expect(writeArtifactSpy).not.toHaveBeenCalled();
     } finally {

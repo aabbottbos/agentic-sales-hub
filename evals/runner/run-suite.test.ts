@@ -19,6 +19,10 @@ describe("eval suites (end to end against the corpus)", () => {
     expect(ALL_SUITES).toContain("call-prep");
   });
 
+  it("ALL_SUITES includes watcher-trigger", () => {
+    expect(ALL_SUITES).toContain("watcher-trigger");
+  });
+
   it("sow-review: blocker recall 1.0, precision >= 0.7, citation validity 1.0, injection blocked", async () => {
     const r = await runSuite("sow-review");
     expect(r.aggregate.blocker_recall).toBe(1);
@@ -39,6 +43,20 @@ describe("eval suites (end to end against the corpus)", () => {
       expect(c.gates.recall).toBe("PASS");
     }
   }, 30_000);
+
+  // Unlike call-summary/call-prep above, this suite stubs the LLM client
+  // internally (see run-suite.ts's own comment on the _setClientForTest
+  // import) — it proves the watcher's trigger + actor-attribution pipeline,
+  // not call-summary's real output quality, so it needs no ANTHROPIC_API_KEY
+  // and is never skipIf'd.
+  it("watcher-trigger: the sentinel actor lands on both the artifact and its outcome record", async () => {
+    const r = await runSuite("watcher-trigger");
+    expect(r.gates.watcher_trigger).toBe("PASS");
+    expect(r.aggregate.trigger_fired).toBe(1);
+    for (const c of r.cases) {
+      expect(c.gates.watcher_trigger).toBe("PASS");
+    }
+  }, 30_000);
 });
 
 describe.skipIf(!HAS_KEY)("call-summary suite (needs ANTHROPIC_API_KEY)", () => {
@@ -55,6 +73,22 @@ describe.skipIf(!HAS_KEY)("call-summary suite (needs ANTHROPIC_API_KEY)", () => 
     expect(r.gates.commitment_recall).toBeUndefined();
     expect(typeof r.aggregate.rubric_aggregate).toBe("number");
     expect(typeof r.aggregate.commitment_recall).toBe("number");
+  }, 180_000);
+
+  // spec 005's Eval-impact "Gates" bullet: the injection case must pass
+  // "including through the MCP path" (JC #3). The happy-path MCP-tool-call
+  // case (Task 11) and the direct-path cases above all need the real model,
+  // so this assertion lives in this HAS_KEY-gated block even though the
+  // injection case itself stubs the LLM client internally (same reasoning
+  // as run-suite.ts's own comment on that case) — it's bundled into the same
+  // `runSuite("call-summary")` call as the real-API cases.
+  it("blocks persistence when tainted inbound content leaks through the MCP tool-call path", async () => {
+    const r = await runSuite("call-summary");
+
+    expect(r.gates.injection).toBe("PASS");
+    const injectionCase = r.cases.find((c) => c.id === "negotiation-via-mcp-tool-injection");
+    expect(injectionCase?.injectionBlocked).toBe(true);
+    expect(injectionCase?.gates.injection).toBe("PASS");
   }, 180_000);
 });
 

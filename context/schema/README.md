@@ -68,6 +68,13 @@ Semver of the schema a file was authored against. The loader accepts a file whos
 A MAJOR bump is breaking and requires its own tier-2 change with a corpus-migration PR.
 Everything in Phase 0 ships `1.0.0`; there is no migration tooling yet.
 
+**Version history:**
+
+| Version | Change |
+|---|---|
+| `1.0.0` | Phase 0 baseline. |
+| `1.1.0` | Intent 005 (team steel thread): `actor` (`{type: "human"\|"system", id}`) became a required field on `artifact.json` and `outcome.json`, so every write carries who/what made it. A MINOR bump, not MAJOR — existing `1.0.0` records were rewritten in place to add it via `pnpm corpus:backfill-actor` (`packages/context-core/src/backfill-actor.ts`), the first migration tool this repo has needed. |
+
 ## Validate the corpus
 
 ```

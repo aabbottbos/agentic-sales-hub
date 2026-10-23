@@ -24,6 +24,7 @@ export async function appendOutcome(
     date: args.date,
     artifact: args.artifact,
     outcome: args.outcome,
+    actor: { type: args.actor.type, id: args.actor.id },
     ...(args.note !== undefined ? { note: args.note } : {}),
   };
 

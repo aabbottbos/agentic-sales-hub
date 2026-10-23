@@ -12,3 +12,4 @@ coverage/
 evals/results/*.local.json
 this-run.json
 .anthropic-key
+.obsidian/

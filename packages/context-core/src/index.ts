@@ -63,6 +63,10 @@ export { appendOutcome } from "./outcomes/append-outcome.js";
 // Artifacts (generation write path)
 export { writeArtifact } from "./write-path.js";
 
+// Concurrency
+export { createOpportunityQueue, opportunityKey } from "./concurrency/opportunity-queue.js";
+export type { OpportunityQueue } from "./concurrency/opportunity-queue.js";
+
 // Corpus validation
 export { validateCorpus } from "./validate-corpus.js";
 export type { CorpusValidationReport } from "./validate-corpus.js";
@@ -85,6 +89,7 @@ export type { AshErrorCode } from "./errors.js";
 
 // Types
 export type {
+  Actor,
   Mutability,
   SkillTier,
   Severity,

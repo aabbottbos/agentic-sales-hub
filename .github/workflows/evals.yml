@@ -6,6 +6,7 @@ on:
       - ".claude/skills/**"
       - "packages/skills/**"
       - "packages/context-core/**"
+      - "packages/mcp-agentic-sales-hub/**"
       - "context/**"
       - "evals/**"
       - "CLAUDE.md"

@@ -11,7 +11,7 @@
     { "path": "context/demand-gen/icp/buyer.md", "span": [1770, 2506], "required": true },
     {
       "path": "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/artifacts/a-0001-brief.md",
-      "span": [1280, 1839],
+      "span": [1315, 1874],
       "required": false
     }
   ]

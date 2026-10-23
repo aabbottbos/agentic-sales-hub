@@ -30,6 +30,8 @@ describe("llm seam", () => {
 
 const DISCOVERY_NOTE =
   "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/meetings/2026-07-14-discovery.md";
+const MSA_REDLINE =
+  "context/accounts/acme-logistics/opportunities/006Ax0000GkLmNpQAA/inbound/2026-09-02-acme-msa-redline.md";
 
 describe("validateSummaryOutput", () => {
   const cit = {
@@ -296,5 +298,169 @@ describe("call-summary impl (stubbed model)", () => {
         def,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe("call-summary impl — inbound-read amendment (spec 005 Task 5)", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = join(here, "../../../..");
+  const contextRoot = join(repoRoot, "examples/demo-corpus");
+  const OPP = "006Ax0000GkLmNpQAA";
+  let loader: ContextLoader;
+
+  beforeAll(async () => {
+    loader = await createLoader({
+      repoRoot,
+      root: contextRoot,
+      taintLedgerPath: join(repoRoot, ".claude/.taint-ledger.test.jsonl"),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("regression: a meetings/** path still reads via ctx.loader.read() and is never tainted", async () => {
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
+    const quote = "ONE exception queue";
+    const stub = JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+
+    expect(res.contextRead).toEqual([DISCOVERY_NOTE]);
+    expect(raw.slice(...out.citations[0].span)).toBe(quote);
+
+    // The meeting note's content must not register as tainted — only readInbound()
+    // registers taint, and this path never calls it.
+    const tainted = await loader.isTainted(raw);
+    expect(tainted).toBeNull();
+  });
+
+  it("an inbound/** path reads via readInbound()+extractUntrusted() and registers taint", async () => {
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [],
+      unsourced_claims: [],
+    });
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: MSA_REDLINE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+
+    expect(validateSummaryOutput(out).valid).toBe(true);
+    expect(res.contextRead).toEqual([MSA_REDLINE]);
+
+    // The prompt sent to the model must be the plain (unwrapped) body — never the
+    // raw <untrusted-content> wrapper, and never containing the [SYSTEM NOTE:...]
+    // preamble that would confuse a summarization prompt.
+    const userPrompt = spy.mock.calls[0][0].user;
+    expect(userPrompt).not.toContain("<untrusted-content");
+    expect(userPrompt).not.toContain("[SYSTEM NOTE:");
+
+    // Pull a genuine multi-word phrase out of the note text actually embedded in
+    // the prompt (real content from the redline, not a guessed string) to use as
+    // the taint-match probe.
+    const start =
+      userPrompt.indexOf("<<<BEGIN MEETING NOTE>>>\n") + "<<<BEGIN MEETING NOTE>>>\n".length;
+    const end = userPrompt.indexOf("\n<<<END MEETING NOTE>>>");
+    const noteBody = userPrompt.slice(start, end);
+    const words = noteBody.split(/\s+/).filter(Boolean);
+    const probe = words.slice(0, 8).join(" ");
+    expect(probe.split(" ").length).toBeGreaterThanOrEqual(3);
+
+    // readInbound()'s taint registration must have actually fired: a value drawn
+    // from the ingested document now matches the taint ledger.
+    const after = await loader.isTainted(probe);
+    expect(after).not.toBeNull();
+    expect(after?.sourcePath).toBe(MSA_REDLINE);
+  });
+
+  it("resolves an inbound citation span correctly against the raw file (frontmatter included)", async () => {
+    const rawFile = (await readFile(resolveContextPath(MSA_REDLINE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
+    const bodyOnly = (await loader.readInbound(MSA_REDLINE)).wrapped;
+    const noteBody = loader.extractUntrusted(bodyOnly);
+    const quote = noteBody.trim().slice(0, 40).trim();
+
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: MSA_REDLINE, quote }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: MSA_REDLINE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+
+    // The span must slice correctly against the RAW file (frontmatter included) —
+    // resolveCitation() always re-reads and slices raw, never the
+    // frontmatter-stripped body extractUntrusted() returns. If the impl failed to
+    // offset the span, this would read the wrong (or out-of-range) text instead
+    // of the model's verbatim quote.
+    const [s, e] = out.citations[0].span;
+    expect(rawFile.slice(s, e)).toBe(quote);
+
+    const resolved = await loader.resolveCitation(out.citations[0]);
+    expect(resolved.text).toBe(quote);
+  });
+
+  it("gives an inbound citation quote not found verbatim an out-of-range span relative to the raw file", async () => {
+    const rawFile = (await readFile(resolveContextPath(MSA_REDLINE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
+    const stub = JSON.stringify({
+      summary: "x",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: MSA_REDLINE, quote: "this phrase is not in the redline at all" }],
+      unsourced_claims: [],
+    });
+    vi.spyOn(llm, "complete").mockResolvedValue(stub);
+
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: MSA_REDLINE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    const out = res.output as SummaryOutput;
+    expect(out.citations[0].span[0]).toBeGreaterThanOrEqual(rawFile.length);
   });
 });

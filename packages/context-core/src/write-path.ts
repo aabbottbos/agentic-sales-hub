@@ -109,6 +109,7 @@ export async function writeArtifact(
         artifact: relPath,
         outcome: "unused",
         date: now.toISOString().slice(0, 10),
+        actor: args.actor,
       },
       { root: deps.root, registry: deps.registry },
     );
@@ -164,6 +165,7 @@ function buildFrontmatter(a: RenderArgs): Record<string, unknown> {
     kind: a.kind,
     generated_by: a.generatedBy,
     superseded: false,
+    actor: { type: a.actor.type, id: a.actor.id },
     citations: a.citations.map((c) => ({ claim: c.claim, path: c.path, span: c.span })),
     ...(a.unsourcedClaims?.length ? { unsourced_claims: a.unsourcedClaims } : {}),
   };
@@ -182,6 +184,7 @@ function renderArtifact(a: RenderArgs, fm: Record<string, unknown>): string {
     `kind: ${fm.kind}`,
     `generated_by: ${fm.generated_by}`,
     `superseded: ${fm.superseded}`,
+    `actor: {type: ${a.actor.type}, id: "${a.actor.id.replaceAll('"', '\\"')}"}`,
     ...(citations.length
       ? [
           "citations:",

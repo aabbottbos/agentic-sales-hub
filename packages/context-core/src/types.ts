@@ -8,6 +8,12 @@ export type SkillTier = "retrieval" | "generation" | "review";
 export type Severity = "blocker" | "major" | "minor";
 export type ClausePosition = "preferred" | "acceptable" | "unacceptable";
 
+/** Who or what produced a write — a human operator or a system/skill actor. */
+export interface Actor {
+  type: "human" | "system";
+  id: string;
+}
+
 export type OutcomeKind =
   | "sent"
   | "won"
@@ -150,6 +156,8 @@ export interface WriteFindingsArgs {
   findings: Finding[];
   /** Optional explicit artifact id; auto-generated if omitted. */
   artifactId?: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
 }
 
 export interface ArtifactCitationInput {
@@ -174,6 +182,8 @@ export interface WriteArtifactArgs {
   unsourcedClaims?: string[];
   /** Explicit artifact id (deterministic tests); auto-minted if omitted. */
   artifactId?: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
 }
 
 export interface WriteArtifactResult {
@@ -189,6 +199,8 @@ export interface AppendOutcomeArgs {
   outcome: OutcomeKind;
   /** ISO date, `YYYY-MM-DD`. */
   date: string;
+  /** Who or what is producing this write — mandatory attribution (spec 005). */
+  actor: Actor;
   note?: string;
 }
 

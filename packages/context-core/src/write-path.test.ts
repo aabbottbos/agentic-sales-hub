@@ -29,6 +29,8 @@ const citation: ArtifactCitationInput = {
   span: [0, 20],
 };
 
+const actor = { type: "system" as const, id: "test-actor" };
+
 /** Same tempCorpus() helper as write-findings.test.ts (mkdtemp + cp of test/fixtures/). */
 async function tempCorpus(): Promise<{ tmpDir: string; root: string }> {
   const tmpDir = await mkdtemp(join(tmpdir(), "wa-"));
@@ -49,6 +51,7 @@ describe("writeArtifact", () => {
           title: "Call brief for Acme discovery",
           body: "\nSome generated prose body.\n",
           citations: [citation],
+          actor,
         },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
@@ -59,6 +62,7 @@ describe("writeArtifact", () => {
       expect(file.frontmatter.generated_by).toBe("call-prep");
       expect(file.frontmatter.superseded).toBe(false);
       expect(file.frontmatter.artifact_id).toBe(artifactId);
+      expect(file.frontmatter.actor).toEqual({ type: "system", id: "test-actor" });
       expect(file.body).toContain("Some generated prose body.");
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -77,6 +81,7 @@ describe("writeArtifact", () => {
           title: "Second brief",
           body: "Body.",
           citations: [citation],
+          actor,
         },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
@@ -99,6 +104,7 @@ describe("writeArtifact", () => {
           title: "Call summary",
           body: "Summary body.",
           citations: [citation],
+          actor,
         },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
@@ -110,6 +116,7 @@ describe("writeArtifact", () => {
         artifact: artifactPath,
         outcome: "unused",
         date: "2026-09-18",
+        actor: { type: "system", id: "test-actor" },
       });
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -129,6 +136,7 @@ describe("writeArtifact", () => {
             title: "Bad kind",
             body: "Body.",
             citations: [citation],
+            actor,
           },
           { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
         ),
@@ -151,6 +159,7 @@ describe("writeArtifact", () => {
             title: "Colliding brief",
             body: "New body that must not land.",
             citations: [citation],
+            actor,
             artifactId: "a-0001",
           },
           { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
@@ -185,6 +194,7 @@ describe("writeArtifact", () => {
               title: `Concurrent brief ${i}`,
               body: `Body ${i}.`,
               citations: [citation],
+              actor,
             },
             { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
           ),
@@ -209,6 +219,7 @@ describe("writeArtifact", () => {
           title: "Valid slug happy path",
           body: "Body.",
           citations: [citation],
+          actor,
         },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
@@ -233,6 +244,7 @@ describe("writeArtifact", () => {
             title: "Malicious slug",
             body: "Body.",
             citations: [citation],
+            actor,
           },
           { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
         ),
@@ -261,6 +273,7 @@ describe("writeArtifact", () => {
             title: "Malicious crmId",
             body: "Body.",
             citations: [citation],
+            actor,
           },
           { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
         ),
@@ -286,6 +299,7 @@ describe("writeArtifact", () => {
         title: "Malicious separator",
         body: "Body.",
         citations: [citation],
+        actor,
       };
       await expect(
         writeArtifact(args, { root, registry, now: () => new Date("2026-09-18T12:00:00Z") }),
@@ -308,6 +322,7 @@ describe("writeArtifact", () => {
           title: "Draft proposal",
           body: "Proposal body.",
           citations: [citation],
+          actor,
         },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );

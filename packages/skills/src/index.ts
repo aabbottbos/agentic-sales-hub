@@ -1,7 +1,8 @@
 // @agentic-sales-hub/skills — skill definitions as data + the runSkill dispatcher.
 
 export { loadSkill, listSkills, _resetRegistryCache } from "./registry.js";
-export { runSkill, validateInput } from "./runner.js";
+export { runSkill, validateInput, CitationValidityError } from "./runner.js";
+export type { CitationFailure } from "./runner.js";
 export { normalizeWithMap } from "./impl/sow-review.js";
 export { PRODUCT_SKILL_IDS } from "./types.js";
 export type {

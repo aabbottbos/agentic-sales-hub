@@ -20,6 +20,7 @@ const fixturesRoot = join(here, "../../test/fixtures");
 
 const OPP = "006Ax0000GkLmNpQAA";
 const sourceDoc = `context/accounts/fix-co/opportunities/${OPP}/inbound/2026-09-03-fixture-redline.md`;
+const actor = { type: "system" as const, id: "test-actor" };
 
 let registry: SchemaRegistry;
 beforeAll(async () => {
@@ -63,7 +64,13 @@ describe("writeFindings", () => {
     const { tmpDir, root } = await tempCorpus();
     try {
       const { artifactPath } = await writeFindings(
-        { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [blocker] },
+        {
+          accountSlug: "fix-co",
+          crmId: OPP,
+          sourceDocument: sourceDoc,
+          findings: [blocker],
+          actor,
+        },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
       expect(artifactPath).toMatch(/\/artifacts\/.*-findings\.md$/);
@@ -72,6 +79,7 @@ describe("writeFindings", () => {
       expect(file.frontmatter.kind).toBe("findings");
       expect(file.frontmatter.source_document).toBe(sourceDoc);
       expect(String(file.frontmatter.source_hash)).toMatch(/^[a-f0-9]{64}$/);
+      expect(file.frontmatter.actor).toEqual(actor);
       expect(file.body).toContain("Not legal advice");
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -87,6 +95,7 @@ describe("writeFindings", () => {
         sourceDocument: sourceDoc,
         findings: [blocker],
         artifactId: "f-fixed",
+        actor,
       };
       await writeFindings(args, { root, registry });
       await expect(writeFindings(args, { root, registry })).rejects.toBeInstanceOf(
@@ -101,11 +110,23 @@ describe("writeFindings", () => {
     const { tmpDir, root } = await tempCorpus();
     try {
       const a = await writeFindings(
-        { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [blocker] },
+        {
+          accountSlug: "fix-co",
+          crmId: OPP,
+          sourceDocument: sourceDoc,
+          findings: [blocker],
+          actor,
+        },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
       const b = await writeFindings(
-        { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [blocker] },
+        {
+          accountSlug: "fix-co",
+          crmId: OPP,
+          sourceDocument: sourceDoc,
+          findings: [blocker],
+          actor,
+        },
         { root, registry, now: () => new Date("2026-09-18T12:05:30Z") },
       );
       expect(a.artifactPath).not.toBe(b.artifactPath);
@@ -120,7 +141,7 @@ describe("writeFindings", () => {
       const bad = { ...blocker, severity: "blocker" as const, suggested_redline: undefined };
       await expect(
         writeFindings(
-          { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [bad] },
+          { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [bad], actor },
           { root, registry },
         ),
       ).rejects.toBeInstanceOf(SchemaValidationError);
@@ -133,7 +154,13 @@ describe("writeFindings", () => {
     const { tmpDir, root } = await tempCorpusAt("demo-root");
     try {
       const { artifactPath } = await writeFindings(
-        { accountSlug: "fix-co", crmId: OPP, sourceDocument: sourceDoc, findings: [blocker] },
+        {
+          accountSlug: "fix-co",
+          crmId: OPP,
+          sourceDocument: sourceDoc,
+          findings: [blocker],
+          actor,
+        },
         { root, registry, now: () => new Date("2026-09-18T12:00:00Z") },
       );
       const expectedAbs = join(
@@ -162,6 +189,7 @@ describe("appendOutcome", () => {
           artifact: `context/accounts/fix-co/opportunities/${OPP}/artifacts/a-0001-brief.md`,
           outcome: "superseded",
           date: "2026-09-18",
+          actor,
         },
         { root, registry },
       );
@@ -170,6 +198,7 @@ describe("appendOutcome", () => {
       expect(JSON.parse(lines.at(-1)!)).toMatchObject({
         outcome: "superseded",
         date: "2026-09-18",
+        actor,
       });
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -188,6 +217,7 @@ describe("appendOutcome", () => {
             artifact: "x",
             outcome: "maybe",
             date: "2026-09-18",
+            actor,
           },
           { root, registry },
         ),

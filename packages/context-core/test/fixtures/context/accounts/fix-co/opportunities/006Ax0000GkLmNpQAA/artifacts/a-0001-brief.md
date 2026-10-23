@@ -1,13 +1,16 @@
 ---
 fictional: true
 mutability: accumulating
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 created: "2026-09-02T00:00:00Z"
 title: Historical brief (fixture)
 artifact_id: a-0001
 kind: brief
 generated_by: call-prep
 superseded: false
+actor:
+  type: system
+  id: legacy
 citations:
   - claim: Services scope is a common concern.
     path: context/org/company.md
