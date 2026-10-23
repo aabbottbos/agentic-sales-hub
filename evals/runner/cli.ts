@@ -11,11 +11,12 @@
  *                        for CI, avoids the pnpm lifecycle banner polluting a
  *                        `> file` redirect)
  */
+import { execFileSync } from "node:child_process";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ALL_SUITES, REPO_ROOT, runSuite, type SuiteName } from "./run-suite.js";
 import { anyGateFailed, buildReport, printTable, writeResult, type RunReport } from "./report.js";
-import { compareReports } from "./compare.js";
+import { compareReports, latestResultFile } from "./compare.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -25,15 +26,29 @@ function flag(name: string): boolean {
   return process.argv.includes(`--${name}`);
 }
 
+/** Commit time (unix seconds) that first added a results file; +Infinity if uncommitted. */
+function resultAddedAt(file: string): number {
+  try {
+    const out = execFileSync(
+      "git",
+      ["log", "--diff-filter=A", "--format=%ct", "-1", "--", `evals/results/${file}`],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    ).trim();
+    return out ? Number(out) : Number.POSITIVE_INFINITY;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
 async function latestCommittedResult(): Promise<RunReport | null> {
   const dir = join(REPO_ROOT, "evals/results");
   let files: string[];
   try {
-    files = (await readdir(dir)).filter((f) => /^\d{4}-\d{2}-\d{2}-.*\.json$/.test(f)).sort();
+    files = await readdir(dir);
   } catch {
     return null;
   }
-  const last = files.at(-1);
+  const last = latestResultFile(files, resultAddedAt);
   if (!last) return null;
   return JSON.parse(await readFile(join(dir, last), "utf8")) as RunReport;
 }
