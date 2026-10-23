@@ -54,7 +54,25 @@ id retry).
      3. Record both calibration rounds in `docs/plans/008-sonnet-5-5.md`.
      4. Open the PR. CI `evals` uses the same key, so it needs the credits
         too.
-4. **`proposal-draft`** (WI-3), T2.
+4. **`proposal-draft`** (WI-3), T2. **Deferred by the user on 2026-10-23:
+   not now.** No intent is written yet; take the next free number at filing
+   time. Scope decisions already made in the aborted 10-23 `write-intent`
+   interview:
+   - **Surfaces: the skill plus its own MCP tool.** Same pattern as
+     `call-prep`: `runSkill` → `writeArtifact` (`kind: proposal`) with a
+     required actor, plus a third tool in `packages/mcp-agentic-sales-hub`.
+   - **Hard gates:** citation validity = 1.00, and the amendment §9 gate that
+     every price, discount, or delivery commitment resolves to
+     `org/pricing.md`, `org/offerings/**`, or a meeting-note commitment. An
+     uncited one fails the suite; `[unsourced]` doesn't get it through.
+   - **The rubric (≥ 4.0/5) is advisory, not blocking.** This follows the
+     `call-summary`/`call-prep` precedent and follow-up 9.
+   - **Built-in default structure.** No template loader; that's WI-5.
+   - **Still open for the intent interview:** what counts as a commitment
+     claim, and how the gate's scorer detects one; the eval cases, since
+     only the Acme opportunity exists until WI-4's corpus expansion, which
+     limits the golden set; and whether to use the existing
+     `a-0002-proposal.md` as a reference proposal.
 5. **Corpus expansion** (WI-4), T2, with ≥2 closed deals and populated
    `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
 6. **The compounding loop**, T2. It depends on corpus expansion's closed
