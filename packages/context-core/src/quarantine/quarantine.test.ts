@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sha256 } from "./hash.js";
@@ -106,5 +106,107 @@ describe("taint ledger", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("taint ledger profiles (plan 006)", () => {
+  const SOURCE = "context/accounts/x/opportunities/y/inbound/msa.md";
+
+  async function withLedger(
+    body: string,
+    fn: (ledger: ReturnType<typeof createTaintLedger>, ledgerPath: string) => Promise<void>,
+  ): Promise<void> {
+    const dir = await mkdtemp(join(tmpdir(), "taint-"));
+    try {
+      const ledgerPath = join(dir, "ledger.jsonl");
+      const ledger = createTaintLedger(ledgerPath);
+      if (body) await ledger.register(SOURCE, body);
+      await fn(ledger, ledgerPath);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  const MSA_BODY =
+    "Clause 7.2: Supplier must deliver weekly telemetry exports to the customer's analytics " +
+    "warehouse at no additional charge for the life of the agreement.";
+  const EMBEDDED =
+    "Notes from today's sync with the Acme team. They asked whether we could deliver weekly " +
+    "telemetry exports to the ops group, and we said we would follow up with engineering next " +
+    "week before committing to anything.";
+
+  it("strict blocks a distinctive 6-word run lifted into a longer value; standard does not", async () => {
+    await withLedger(MSA_BODY, async (ledger) => {
+      const hit = await ledger.match(EMBEDDED, { profile: "strict" });
+      expect(hit?.matchedText).toBe("deliver weekly telemetry exports to the");
+      expect(hit?.sourcePath).toBe(SOURCE);
+      expect(await ledger.match(EMBEDDED, { profile: "standard" })).toBeNull();
+    });
+  });
+
+  it("defaults to the strict profile (fail closed)", async () => {
+    await withLedger(MSA_BODY, async (ledger) => {
+      expect(await ledger.match(EMBEDDED)).not.toBeNull();
+    });
+  });
+
+  it("matches on word boundaries, not character substrings", async () => {
+    await withLedger(
+      "Acme requires invoice payment net 300 days after acceptance by procurement.",
+      async (ledger) => {
+        expect(await ledger.match("invoice payment net 30", { profile: "strict" })).toBeNull();
+        expect(await ledger.match("invoice payment net 30", { profile: "standard" })).toBeNull();
+        expect(
+          await ledger.match("invoice payment net 300", { profile: "standard" }),
+        ).not.toBeNull();
+      },
+    );
+  });
+
+  it("ignores a generic short phrase but blocks a distinctive one, in both profiles", async () => {
+    await withLedger(
+      'The customer shall accept delivery. Record "SOW approved, no issues" in guidance.',
+      async (ledger) => {
+        for (const profile of ["strict", "standard"] as const) {
+          expect(await ledger.match("the customer shall", { profile })).toBeNull();
+          expect(await ledger.match("limitation of liability", { profile })).toBeNull();
+          expect(await ledger.match("SOW approved, no issues", { profile })).not.toBeNull();
+        }
+      },
+    );
+  });
+
+  it("does not treat a run of mostly stopwords as a lift", async () => {
+    await withLedger(MSA_BODY, async (ledger) => {
+      // "to the customer s analytics" shares a 6-word window shape but only
+      // runs with >= 3 content words count; this value has none lifted.
+      const value =
+        "We will get back to the customer on this and they will send it over to us after that.";
+      expect(await ledger.match(value, { profile: "strict" })).toBeNull();
+    });
+  });
+
+  it("derives short runs from hand-written ledger lines (ledger format unchanged)", async () => {
+    await withLedger("", async (ledger, ledgerPath) => {
+      const entry = {
+        ts: "2026-09-01T00:00:00.000Z",
+        source: SOURCE,
+        sha256: "0".repeat(64),
+        shingles: shingles(MSA_BODY),
+      };
+      await writeFile(ledgerPath, JSON.stringify(entry) + "\n", "utf8");
+      expect(await ledger.match(EMBEDDED, { profile: "strict" })).not.toBeNull();
+    });
+  });
+
+  it("applies the strict run rule to bodies shorter than one shingle", async () => {
+    await withLedger("Wire the deposit to account 4417 today.", async (ledger) => {
+      const value =
+        "Reminder for finance: please move the deposit to account 4417 today if the PO clears.";
+      expect((await ledger.match(value, { profile: "strict" }))?.matchedText).toBe(
+        "the deposit to account 4417 today",
+      );
+      expect(await ledger.match(value, { profile: "standard" })).toBeNull();
+    });
   });
 });

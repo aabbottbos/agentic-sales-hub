@@ -199,4 +199,33 @@ describe("quarantine-inbound hook", () => {
     });
     expect(code).toBe(0);
   });
+
+  const meetingNote = `context/accounts/acme-logistics/opportunities/${OPP}/meetings/2026-10-01-call.md`;
+
+  it("blocks a meeting-note Write that embeds a short lifted run in longer text (strict profile)", () => {
+    const { code, stderr } = runHook(quarantineHook, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: meetingNote,
+        content:
+          "Call notes: Dana said procurement wants deliverables reviewed at the sole discretion " +
+          "of the customer before invoicing, and asked us to confirm the new timeline by Friday.",
+      },
+    });
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/quarantine|inbound/i);
+  });
+
+  it("allows a meeting-note Write with no lifted run", () => {
+    const { code } = runHook(quarantineHook, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: meetingNote,
+        content:
+          "Call notes: Dana confirmed the pilot timeline and asked for the updated integration " +
+          "plan by Friday.",
+      },
+    });
+    expect(code).toBe(0);
+  });
 });

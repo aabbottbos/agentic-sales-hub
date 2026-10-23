@@ -82,10 +82,16 @@ export const actorInputSchema = z.object({
  * matched, so a caller checking multiple granular values (e.g. per-citation
  * quotes) gets an actionable diagnostic rather than just "something in here
  * is tainted".
+ *
+ * Uses the `standard` taint profile, not the default `strict` one (plan 006):
+ * a summary of an inbound transcript legitimately echoes short phrases from
+ * its own source, so only long lifts and whole short phrases block here. The
+ * planned real fix for summary laundering is taint provenance on derived
+ * artifacts, not a stricter verbatim matcher.
  */
 export async function assertNotTainted(loader: ContextLoader, ...values: string[]): Promise<void> {
   for (const [i, value] of values.entries()) {
-    const match = await loader.isTainted(value);
+    const match = await loader.isTainted(value, { profile: "standard" });
     if (match) {
       throw new Error(
         `assertNotTainted: value[${i}] matches quarantined content from ` +

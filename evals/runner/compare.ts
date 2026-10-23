@@ -13,6 +13,26 @@ const PRIMARY: Record<string, string[]> = {
   "call-prep": ["citation_validity"],
 };
 
+/**
+ * Pick the newest `<date>-<sha>.json` result file. Dates sort lexically, but
+ * two results can share a date and short shas carry no order, so same-date
+ * files are ordered by `addedAt` (when the file was first committed; an
+ * uncommitted file should report +Infinity, i.e. newest).
+ */
+export function latestResultFile(
+  files: string[],
+  addedAt: (file: string) => number,
+): string | undefined {
+  const results = files.filter((f) => /^\d{4}-\d{2}-\d{2}-.*\.json$/.test(f)).sort();
+  const lastDate = results.at(-1)?.slice(0, 10);
+  const sameDay = results.filter((f) => f.slice(0, 10) === lastDate);
+  if (sameDay.length <= 1) return sameDay[0];
+  return sameDay
+    .map((f) => ({ f, t: addedAt(f) }))
+    .sort((a, b) => a.t - b.t || a.f.localeCompare(b.f))
+    .at(-1)?.f;
+}
+
 export interface Comparison {
   verdict: "PASS" | "REGRESSION";
   regressions: string[];

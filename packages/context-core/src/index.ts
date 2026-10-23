@@ -53,8 +53,16 @@ export {
   normalizeForMatch,
   shingles,
   DEFAULT_SHINGLE_THRESHOLD,
+  STRICT_RUN_WORDS,
+  STRICT_RUN_MIN_CONTENT_WORDS,
+  SHORT_PHRASE_MIN_CONTENT_WORDS,
 } from "./quarantine/taint.js";
-export type { TaintLedger, TaintLedgerEntry } from "./quarantine/taint.js";
+export type {
+  TaintLedger,
+  TaintLedgerEntry,
+  TaintMatchOptions,
+  TaintProfile,
+} from "./quarantine/taint.js";
 
 // Findings / outcomes
 export { writeFindings } from "./findings/write-findings.js";
