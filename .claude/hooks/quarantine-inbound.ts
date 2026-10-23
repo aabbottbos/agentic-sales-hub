@@ -93,7 +93,7 @@ async function main(): Promise<void> {
 
   const candidates = candidateStrings(tool, input);
   for (const value of candidates) {
-    const match = await ledger.match(value);
+    const match = await ledger.match(value, { profile: "strict" });
     if (match) {
       block(
         `tool call ${tool} carries an argument derived from quarantined content ` +
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
       filePath.replaceAll("\\", "/").startsWith("context/")
     ) {
       const content = typeof input.content === "string" ? input.content : "";
-      const match = content ? await ledger.match(content) : null;
+      const match = content ? await ledger.match(content, { profile: "strict" }) : null;
       if (match) {
         block(
           `write to ${filePath} carries quarantined content (source: ${match.sourcePath}). ` +
