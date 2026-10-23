@@ -99,3 +99,23 @@ Edge case: a body shorter than 8 words produces one shorter "shingle", as today.
 - Taint provenance on derived artifacts (new T2 follow-up).
 - Stemming and paraphrase detection. Verbatim-lift matching can't catch an LLM paraphrase, and provenance is the answer there.
 - Multi-process ledger locking.
+
+## Calibration results (Task 2, 2026-10-23)
+
+Method: register both corpus inbound docs (the MSA and SOW redlines) in a temp ledger. Then run the matcher over **1,586 paragraphs** from 48 legitimate files: every non-inbound corpus file, CLAUDE.md, and `docs/**`. A paragraph is any block of 3 or more words separated by blank lines. Each hit was inspected by hand.
+
+| Matcher | Hits | Outside `legal/**` |
+|---|---|---|
+| `main`'s matcher | 12 | 1 |
+| standard | 11 | 1 |
+| strict, k=5, min=2 / 3 / 4 | 23 / 20 / 12 | 8 / 5 / 1 |
+| **strict, k=6, min=3 (chosen)** | **14** | **1** |
+| strict, k=7, min=2–4 | 14 | 1 |
+
+- **The hit outside `legal/**`** is `docs/plans/001`, which quotes the SOW injection text itself. Blocking it is correct, and `main` blocks it too.
+- **`legal/**` hits** are expected. The counterparty redlines mark up our own clause language, so they share boilerplate with `legal/clause-library/**`. `protect-paths` already makes those paths unwritable.
+- **k=5 adds real false positives**, for example "the fixed not to exceed" in `people/` and the ICP file, and "sole discretion of the customer" in `org/offerings`. **k=7** finds the same as k=6 but catches less. So k=6 with min=3 adds **zero** new false positives outside `legal/**`.
+
+**Deviation from the design above:** `SHORT_PHRASE_MIN_CONTENT_WORDS` is set to **3**, not 2. At 2, rule 3 still matched clause headings like "limitation of liability", so the hook would block a plain Grep for one. "SOW approved, no issues" has 3 content words and is still caught.
+
+**Regression proof:** the new hook-test note and the new `msa-redline` injection write are both **allowed by `main`'s matcher**, **blocked by strict**, and allowed by standard.

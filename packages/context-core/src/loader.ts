@@ -10,7 +10,7 @@ import { assertValidRetrievalResult } from "./retrieval/result.js";
 import { resolveCitation } from "./provenance/resolve-citation.js";
 import { verifyCitation } from "./provenance/verify-citation.js";
 import { wrapUntrusted, extractUntrusted } from "./quarantine/wrap.js";
-import { createTaintLedger, type TaintLedger } from "./quarantine/taint.js";
+import { createTaintLedger, type TaintLedger, type TaintMatchOptions } from "./quarantine/taint.js";
 import { sha256 } from "./quarantine/hash.js";
 import { normalizeNewlines } from "./frontmatter/parse.js";
 import { writeFindings } from "./findings/write-findings.js";
@@ -61,8 +61,8 @@ export interface ContextLoader {
   readInbound(path: string): Promise<{ wrapped: string; hash: string }>;
   /** Recover inner content from a wrapped string (taint already registered). */
   extractUntrusted(wrapped: string): string;
-  /** Check a candidate value against the taint ledger. */
-  isTainted(value: string): Promise<TaintMatch | null>;
+  /** Check a candidate value against the taint ledger. Profile defaults to `strict`. */
+  isTainted(value: string, opts?: TaintMatchOptions): Promise<TaintMatch | null>;
   writeFindings(args: WriteFindingsArgs): Promise<{ artifactPath: string }>;
   appendOutcome(args: AppendOutcomeArgs): Promise<{ outcomesPath: string }>;
   writeArtifact(args: WriteArtifactArgs): Promise<WriteArtifactResult>;
@@ -129,7 +129,7 @@ export async function createLoader(opts: LoaderOptions): Promise<ContextLoader> 
 
     extractUntrusted: (wrapped) => extractUntrusted(wrapped),
 
-    isTainted: (value) => ledger.match(value),
+    isTainted: (value, opts) => ledger.match(value, opts),
 
     writeFindings: (args) =>
       opportunityQueue.run(opportunityKey(args.accountSlug, args.crmId), () =>
