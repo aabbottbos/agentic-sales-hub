@@ -3,7 +3,12 @@ import type { RunContext, SkillImpl, SkillImplResult, TraceEntry } from "../type
 import { complete } from "./llm.js";
 import { buildSystemPrompt, buildUserPrompt } from "./call-summary.prompt.js";
 import { validateSummaryOutput, type SummaryOutput } from "./summary-schema.js";
-import { resolveCitationSpan, type RawCitation } from "./citation-span.js";
+import {
+  misquoteFeedback,
+  resolveCitationSpan,
+  type RawCitation,
+  type UnlocatedQuote,
+} from "./citation-span.js";
 import { extractJsonObject } from "./json-extract.js";
 
 interface CallSummaryInput {
@@ -88,8 +93,8 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
       noteText.length + spanOffset,
       noteText.length + spanOffset + 1,
     ];
-    const fixCitations = (parsed: unknown): number => {
-      let unlocatable = 0;
+    const fixCitations = (parsed: unknown): UnlocatedQuote[] => {
+      const unlocatable: UnlocatedQuote[] = [];
       const fix = (raw: RawCitation): { path: string; quote: string; span: [number, number] } => {
         const resolved = resolveCitationSpan(noteText, raw);
         if (resolved) {
@@ -98,12 +103,10 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
             span: [resolved.span[0] + spanOffset, resolved.span[1] + spanOffset],
           };
         }
-        unlocatable++;
-        return {
-          path: typeof raw.path === "string" ? raw.path : meetingPath,
-          quote: typeof raw.quote === "string" && raw.quote.length ? raw.quote : "(no quote)",
-          span: badSpan,
-        };
+        const path = typeof raw.path === "string" ? raw.path : meetingPath;
+        const quote = typeof raw.quote === "string" && raw.quote.length ? raw.quote : "(no quote)";
+        unlocatable.push({ path, quote });
+        return { path, quote, span: badSpan };
       };
       if (parsed && typeof parsed === "object") {
         const p = parsed as Record<string, unknown>;
@@ -126,13 +129,21 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
     // are API errors, so the seam's own retry does not catch them — retry the
     // whole generate → parse → validate a few times before giving up. A
     // persistent failure is a real problem and throws.
+    //
+    // A valid output whose quotes aren't verbatim in the note gets ONE
+    // regeneration, told which quotes failed (plan 009). The quotes fed back are
+    // the model's own previous output, so this adds no new untrusted channel. If
+    // it still misquotes, the output is returned as-is and the gate fails.
     const MAX_GEN_ATTEMPTS = 3;
     let output: SummaryOutput | null = null;
+    let fallback: SummaryOutput | null = null;
+    let feedback = "";
     let lastError = "unknown";
     for (let attempt = 1; attempt <= MAX_GEN_ATTEMPTS; attempt++) {
+      const userPrompt = buildUserPrompt(meetingPath, noteText);
       const responseText = await complete({
         system: buildSystemPrompt(),
-        user: buildUserPrompt(meetingPath, noteText),
+        user: feedback ? `${userPrompt}\n\n${feedback}` : userPrompt,
         model: MODEL,
         maxTokens: MAX_TOKENS,
       });
@@ -151,12 +162,21 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
       } else {
         const unlocatable = fixCitations(parsed);
         const check = validateSummaryOutput(parsed);
+        if (check.valid && unlocatable.length && !fallback && attempt < MAX_GEN_ATTEMPTS) {
+          fallback = parsed as SummaryOutput;
+          feedback = misquoteFeedback(unlocatable);
+          trace.push({
+            step: "model",
+            detail: `attempt ${attempt}: ${unlocatable.length} quote(s) not found verbatim; regenerating once with feedback`,
+          });
+          continue;
+        }
         if (check.valid) {
           output = parsed as SummaryOutput;
           trace.push({
             step: "model",
             detail: `parsed + validated on attempt ${attempt}${
-              unlocatable ? `; ${unlocatable} quote(s) not found in note` : ""
+              unlocatable.length ? `; ${unlocatable.length} quote(s) not found in note` : ""
             }`,
           });
           break;
@@ -169,6 +189,13 @@ export const callSummaryImpl: SkillImpl<CallSummaryInput, SummaryOutput> = {
       }
     }
 
+    if (!output && fallback) {
+      output = fallback;
+      trace.push({
+        step: "model",
+        detail: "regeneration produced no valid output; returning the first (misquoted) one",
+      });
+    }
     if (!output) {
       throw new Error(
         `call-summary: no valid output after ${MAX_GEN_ATTEMPTS} attempts (last: ${lastError})`,

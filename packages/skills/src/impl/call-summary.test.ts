@@ -8,6 +8,7 @@ import {
   type ContextLoader,
 } from "@agentic-sales-hub/context-core";
 import { complete, type CompleteArgs } from "./llm.js";
+import { misquoteFeedback } from "./citation-span.js";
 import { validateSummaryOutput, type SummaryOutput } from "./summary-schema.js";
 import { buildSystemPrompt, buildUserPrompt } from "./call-summary.prompt.js";
 import { callSummaryImpl } from "./call-summary.js";
@@ -462,5 +463,83 @@ describe("call-summary impl — inbound-read amendment (spec 005 Task 5)", () =>
     );
     const out = res.output as SummaryOutput;
     expect(out.citations[0].span[0]).toBeGreaterThanOrEqual(rawFile.length);
+  });
+});
+
+describe("call-summary regenerate-once on misquote (plan 009)", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = join(here, "../../../..");
+  const contextRoot = join(repoRoot, "examples/demo-corpus");
+  const OPP = "006Ax0000GkLmNpQAA";
+  const GOOD = "ONE exception queue";
+  const STITCHED = "one exception queue across all carrier portals by Friday";
+  let loader: ContextLoader;
+
+  beforeAll(async () => {
+    loader = await createLoader({
+      repoRoot,
+      root: contextRoot,
+      taintLedgerPath: join(repoRoot, ".claude/.taint-ledger.test.jsonl"),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const summary = (quote: string) =>
+    JSON.stringify({
+      summary: "Acme wants one exception queue.",
+      commitments: [],
+      next_steps: [],
+      context_deltas: [],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
+      unsourced_claims: [],
+    });
+
+  async function run() {
+    const def = await loadSkill("call-summary");
+    const res = await callSummaryImpl.run(
+      { meeting_path: DISCOVERY_NOTE },
+      { loader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      def,
+    );
+    return res.output as SummaryOutput;
+  }
+
+  it("regenerates once with feedback and uses the clean second answer", async () => {
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
+    expect(raw).not.toContain(STITCHED);
+    const spy = vi
+      .spyOn(llm, "complete")
+      .mockResolvedValueOnce(summary(STITCHED))
+      .mockResolvedValueOnce(summary(GOOD));
+    const out = await run();
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy.mock.calls[1]![0].user).toContain(JSON.stringify(STITCHED));
+    expect(raw.slice(...out.citations[0]!.span)).toBe(GOOD);
+  });
+
+  it("regenerates at most once, then returns the misquoted answer for the gate to fail", async () => {
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue(summary(STITCHED));
+    await run();
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("misquoteFeedback", () => {
+  it("lists each failed path + quote, truncates long quotes, and caps the list", () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ path: `p${i}.md`, quote: `q${i}` }));
+    const long = { path: "long.md", quote: "x".repeat(300) };
+    const text = misquoteFeedback([long, ...many]);
+    expect(text).toContain('long.md: "' + "x".repeat(200) + '…"');
+    expect(text).toContain('p8.md: "q8"');
+    expect(text).not.toContain("p9.md");
+    expect(text).toContain("…and 3 more");
+    expect(text).toMatch(/unsourced_claims/);
+    expect(misquoteFeedback([long, ...many])).toBe(text);
   });
 });
