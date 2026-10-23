@@ -254,3 +254,81 @@ describe("call-prep impl (stubbed model)", () => {
     expect(validateBriefOutput(res.output).valid).toBe(true);
   });
 });
+
+describe("call-prep regenerate-once on misquote (plan 009)", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = join(here, "../../../..");
+  const contextRoot = join(repoRoot, "examples/demo-corpus");
+  const ACCOUNT = "acme-logistics";
+  const OPP = "006Ax0000GkLmNpQAA";
+  const STITCHED = "this stitched quote is definitely not in the note";
+  let loader: ContextLoader;
+  let goodQuote: string;
+  let discoveryLen: number;
+
+  beforeAll(async () => {
+    loader = await createLoader({
+      repoRoot,
+      root: contextRoot,
+      taintLedgerPath: join(repoRoot, ".claude/.taint-ledger.test.jsonl"),
+    });
+    const raw = (await readFile(resolveContextPath(DISCOVERY_NOTE, contextRoot), "utf8")).replace(
+      /\r\n/g,
+      "\n",
+    );
+    goodQuote = raw.slice(0, 40).trim();
+    discoveryLen = raw.length;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const brief = (quote: string) =>
+    JSON.stringify({
+      goal: "x",
+      what_we_know: [{ text: "a", citation: { path: DISCOVERY_NOTE, quote } }],
+      talking_points: [],
+      risks: [],
+      citations: [{ path: DISCOVERY_NOTE, quote }],
+      unsourced_claims: [],
+    });
+
+  async function run() {
+    const def = await loadSkill("call-prep");
+    const res = await callPrepImpl.run(
+      { account_slug: ACCOUNT, opp_id: OPP },
+      { loader, scopeParams: { accountSlug: ACCOUNT, oppId: OPP } },
+      def,
+    );
+    return { out: res.output as BriefOutput, trace: res.trace };
+  }
+
+  it("regenerates once with feedback naming the failed quote, and uses the clean second answer", async () => {
+    const spy = vi
+      .spyOn(llm, "complete")
+      .mockResolvedValueOnce(brief(STITCHED))
+      .mockResolvedValueOnce(brief(goodQuote));
+    const { out, trace } = await run();
+    expect(spy).toHaveBeenCalledTimes(2);
+    const secondUser = spy.mock.calls[1]![0].user;
+    expect(secondUser).toContain("do not appear verbatim");
+    expect(secondUser).toContain(JSON.stringify(STITCHED));
+    expect(spy.mock.calls[0]![0].user).not.toContain("do not appear verbatim");
+    expect(out.what_we_know[0]!.citation.span[1]).toBeLessThanOrEqual(discoveryLen);
+    expect(trace.map((t) => t.detail).join("\n")).toMatch(/regenerating once with feedback/);
+  });
+
+  it("regenerates at most once: a second misquote is returned as-is (gate fails honestly), no third call", async () => {
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue(brief(STITCHED));
+    const { out } = await run();
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(out.citations[0]!.span[0]).toBeGreaterThanOrEqual(discoveryLen);
+  });
+
+  it("does not regenerate a clean answer", async () => {
+    const spy = vi.spyOn(llm, "complete").mockResolvedValue(brief(goodQuote));
+    await run();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});

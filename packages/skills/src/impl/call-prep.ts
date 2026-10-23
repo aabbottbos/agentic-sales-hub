@@ -3,7 +3,12 @@ import type { RunContext, SkillImpl, SkillImplResult, TraceEntry } from "../type
 import { complete } from "./llm.js";
 import { buildSystemPrompt, buildUserPrompt, type ContextFile } from "./call-prep.prompt.js";
 import { validateBriefOutput, type BriefOutput } from "./brief-schema.js";
-import { resolveCitationSpan, type RawCitation } from "./citation-span.js";
+import {
+  misquoteFeedback,
+  resolveCitationSpan,
+  type RawCitation,
+  type UnlocatedQuote,
+} from "./citation-span.js";
 import { extractJsonObject } from "./json-extract.js";
 
 interface CallPrepInput {
@@ -71,15 +76,15 @@ export const callPrepImpl: SkillImpl<CallPrepInput, BriefOutput> = {
     // the run crashing or silently attributing the quote to the wrong file:
     //   1. path names a file that was never read (hallucinated path)
     //   2. path is valid but the quote isn't a verbatim substring of it
-    const fixCitations = (parsed: unknown): number => {
-      let unlocatable = 0;
+    const fixCitations = (parsed: unknown): UnlocatedQuote[] => {
+      const unlocatable: UnlocatedQuote[] = [];
       const fix = (raw: RawCitation): { path: string; quote: string; span: [number, number] } => {
         const path = typeof raw.path === "string" ? raw.path : "(unknown path)";
         const quote = typeof raw.quote === "string" && raw.quote.length ? raw.quote : "(no quote)";
         const sourceText = rawByPath.get(path);
         const resolved = sourceText !== undefined ? resolveCitationSpan(sourceText, raw) : null;
         if (resolved) return resolved;
-        unlocatable++;
+        unlocatable.push({ path, quote });
         if (sourceText === undefined) {
           return { path, quote, span: [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER + 1] };
         }
@@ -106,13 +111,20 @@ export const callPrepImpl: SkillImpl<CallPrepInput, BriefOutput> = {
     // retry does not catch them — retry the whole generate -> parse -> validate
     // a few times before giving up. A persistent failure is a real problem and
     // throws.
+    //
+    // A valid output whose quotes aren't verbatim in their named file gets ONE
+    // regeneration, told which quotes failed (plan 009). If that still misquotes,
+    // the output is returned as-is and the citation-validity gate fails honestly.
     const MAX_GEN_ATTEMPTS = 3;
     let output: BriefOutput | null = null;
+    let fallback: BriefOutput | null = null;
+    let feedback = "";
     let lastError = "unknown";
     for (let attempt = 1; attempt <= MAX_GEN_ATTEMPTS; attempt++) {
+      const userPrompt = buildUserPrompt(accountSlug, oppId, input.meeting_context, files);
       const responseText = await complete({
         system: buildSystemPrompt(),
-        user: buildUserPrompt(accountSlug, oppId, input.meeting_context, files),
+        user: feedback ? `${userPrompt}\n\n${feedback}` : userPrompt,
         model: MODEL,
         maxTokens: MAX_TOKENS,
       });
@@ -131,12 +143,21 @@ export const callPrepImpl: SkillImpl<CallPrepInput, BriefOutput> = {
       } else {
         const unlocatable = fixCitations(parsed);
         const check = validateBriefOutput(parsed);
+        if (check.valid && unlocatable.length && !fallback && attempt < MAX_GEN_ATTEMPTS) {
+          fallback = parsed as BriefOutput;
+          feedback = misquoteFeedback(unlocatable);
+          trace.push({
+            step: "model",
+            detail: `attempt ${attempt}: ${unlocatable.length} quote(s) not found verbatim; regenerating once with feedback`,
+          });
+          continue;
+        }
         if (check.valid) {
           output = parsed as BriefOutput;
           trace.push({
             step: "model",
             detail: `parsed + validated on attempt ${attempt}${
-              unlocatable ? `; ${unlocatable} quote(s) not found in named file` : ""
+              unlocatable.length ? `; ${unlocatable.length} quote(s) not found in named file` : ""
             }`,
           });
           break;
@@ -149,6 +170,13 @@ export const callPrepImpl: SkillImpl<CallPrepInput, BriefOutput> = {
       }
     }
 
+    if (!output && fallback) {
+      output = fallback;
+      trace.push({
+        step: "model",
+        detail: "regeneration produced no valid output; returning the first (misquoted) one",
+      });
+    }
     if (!output) {
       throw new Error(
         `call-prep: no valid output after ${MAX_GEN_ATTEMPTS} attempts (last: ${lastError})`,

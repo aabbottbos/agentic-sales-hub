@@ -83,3 +83,38 @@ export function resolveCitationSpan(raw: string, cit: RawCitation): ResolvedSpan
   }
   return null;
 }
+
+/** A citation whose quote `resolveCitationSpan` could not locate in its named file. */
+export interface UnlocatedQuote {
+  path: string;
+  quote: string;
+}
+
+const FEEDBACK_MAX_QUOTES = 10;
+const FEEDBACK_MAX_QUOTE_CHARS = 200;
+
+/**
+ * Feedback appended to the user prompt for the one regeneration a skill makes
+ * when its output cites quotes that aren't verbatim in the named file (plan
+ * 009). Deterministic: the same failures produce the same text.
+ */
+export function misquoteFeedback(failed: UnlocatedQuote[]): string {
+  const shown = failed.slice(0, FEEDBACK_MAX_QUOTES).map((f) => {
+    const q =
+      f.quote.length > FEEDBACK_MAX_QUOTE_CHARS
+        ? `${f.quote.slice(0, FEEDBACK_MAX_QUOTE_CHARS)}…`
+        : f.quote;
+    return `- ${f.path}: ${JSON.stringify(q)}`;
+  });
+  const more =
+    failed.length > FEEDBACK_MAX_QUOTES
+      ? [`- …and ${failed.length - FEEDBACK_MAX_QUOTES} more`]
+      : [];
+  return [
+    "Your previous answer cited these quotes, which do not appear verbatim in the file named:",
+    ...shown,
+    ...more,
+    "",
+    "Re-answer in full. Every `quote` must be copied exactly, as one contiguous passage from that one file — never join text from two places. If no exact passage supports a claim, move it to `unsourced_claims`.",
+  ].join("\n");
+}
