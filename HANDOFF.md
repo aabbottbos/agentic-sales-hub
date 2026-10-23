@@ -3,11 +3,12 @@
 Working-state notes for the next session. Not a spec — see `docs/` for those.
 Last updated: **2026-10-23** (Intent 005, the team steel thread, **shipped to
 `main`** via PR #23, `abd59fe`. Plans 006 (taint-ledger hardening, PR #25)
-and 007 (`writeFindings` id retry, PR #26, `e587398`) followed it; latest
-committed eval result `evals/results/2026-10-23-6b82567.json`: all hard gates
-pass, no regression. **Plan 008 (Sonnet 5.5) is in progress** on branch
-`feat/008-sonnet-5-5`. It's pushed with no PR yet, and blocked on a decision
-about one call-prep misquote; see "Next action" item 3.
+007 (`writeFindings` id retry, PR #26, `e587398`), and 009 (regenerate once
+on a misquote, PR #27, `0d51338`) followed it; latest committed eval result
+`evals/results/2026-10-23-59bb02d.json`: all hard gates pass, no regression.
+**Plan 008 (Sonnet 5.5) is in progress** on branch `feat/008-sonnet-5-5`,
+pushed with no PR yet. **It's blocked on Anthropic API credits:** the balance
+ran out mid-calibration on 10-23. See "Next action" item 3.
 **Priority call, 2026-10-23:** keep building capabilities as fast as possible.
 The North Star's October writeup + demo video is deferred, not cancelled.
 Next up: see "Next action" below.)
@@ -39,14 +40,20 @@ id retry).
      had one judge call fail, and the rubric is advisory). `call-prep` passed
      1.00 on 2/3 runs (rubric 5.0 / 4.25). Its run 2 scored **0.958, FAIL**:
      1 of 24 citations was a stitched quote (follow-up 15).
-   - **Pending decision before the PR**, chosen by the user:
-     - (a) **Recommended:** fix follow-up 15 first, with a bounded
-       regenerate-once in the impl when a quote isn't verbatim. The gate
-       stays unchanged, and it helps both models.
-     - (b) Try effort `medium`.
-     - (c) Ship as-is and track the rate.
-     After the decision: run the full suite with `--write-results`, open the
-     PR, and record the numbers in the plan doc.
+   - **Decision (user, 10-23): option (a).** Fix follow-up 15 first with a
+     bounded regenerate-once. This shipped as plan 009 (PR #27).
+   - **Round 2 calibration, on top of 009:**
+     - `call-prep`: citation validity 1.00 on 3/3 runs (rubric 4.25 ×3).
+     - `call-summary`: 1.00 on run 1 (rubric 3.75).
+     - `call-summary` runs 2 and 3 crashed: `400 credit balance is too low`.
+       That's an external cause, not a code failure.
+   - **To finish, once credits are topped up:**
+     1. Run 2× `pnpm eval --suite call-summary`.
+     2. Run `pnpm exec tsx --env-file=.env.local evals/runner/cli.ts --suite all --write-results`
+        and commit the results file.
+     3. Record both calibration rounds in `docs/plans/008-sonnet-5-5.md`.
+     4. Open the PR. CI `evals` uses the same key, so it needs the credits
+        too.
 4. **`proposal-draft`** (WI-3), T2.
 5. **Corpus expansion** (WI-4), T2, with ≥2 closed deals and populated
    `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
@@ -356,23 +363,13 @@ All six Phase 0 intent success criteria are met.
     (`latestResultFile()` in `evals/runner/compare.ts`; an uncommitted file
     counts as newest). No report-format change was needed, because CI checks
     out with `fetch-depth: 0`.
-15. **`call-prep` occasionally misquotes a citation.** It has happened on
-    both models.
-    - **Sonnet 5:** 1 crashing run on 10-23 (before `bd991b6` made it a
-      recorded FAIL), then clean on 2 later full runs and on CI.
-    - **Sonnet 5.5:** 1 of 3 calibration runs.
-    - **Example (5.5):** it cited
-      `org/evidence/cs-midwest-freight.md` with the quote
-      `"6 weeks to 3.5 (down ~40%)"`. That stitches together the frontmatter
-      line `6 weeks to 3.5 weeks (down ~40%)` and the body text
-      `from 6 weeks to 3.5,`, so the quote appears nowhere in the file.
-    - **Effect:** the gate catches it correctly, but it makes the `evals` CI
-      check flaky.
-    - **Candidate fix:** when a quote isn't a verbatim substring of its
-      cited file, regenerate once, telling the model which quote failed,
-      before returning. Neither the gate nor the contract changes. Check the
-      tier: it's an impl-internal retry with no prompt or contract change,
-      so likely T1.
+15. **Misquoted citations:** done (plan 009, PR #27). When a quote isn't
+    verbatim in its cited file, `call-prep`/`call-summary` now regenerate
+    once, naming the failed quotes. If the retry still misquotes, the output
+    is returned and the gate fails honestly. The gate and contract are
+    unchanged. The motivating example was Sonnet 5.5 stitching
+    `cs-midwest-freight.md` lines into `"6 weeks to 3.5 (down ~40%)"`. In
+    round 2 calibration on Sonnet 5.5, `call-prep` held 1.00 on 3/3 runs.
 16. **Taint provenance on artifacts derived from inbound** (T2: schema plus
     skill contract). This is the real fix for summary laundering. A
     `call-summary` of an inbound transcript passes the `standard` profile,
