@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { assertAppendOnly } from "../fs/append-only.js";
 import { validateAgainst } from "../schema/validate.js";
@@ -43,54 +43,93 @@ export async function writeFindings(
     }
   }
 
-  const artifactId = args.artifactId ?? `f-${now.toISOString().slice(0, 10)}-${shortId(now)}`;
   const oppDir = `context/accounts/${args.accountSlug}/opportunities/${args.crmId}`;
-  const relPath = `${oppDir}/artifacts/${artifactId}-findings.md`;
-
-  if (!relPath.includes("/artifacts/") || relPath.includes("context/legal/")) {
-    throw new AppendOnlyViolationError(
-      relPath,
-      "create",
-      "findings must be written under artifacts/",
-    );
-  }
-  // Runs the append-only check (create is allowed; this also rejects bad shapes).
-  assertAppendOnly(relPath, "create");
-
-  const absPath = resolveContextPath(relPath, deps.root);
-  await assertDoesNotExist(absPath, relPath);
-
+  const artifactsDir = `${oppDir}/artifacts`;
+  const baseId = `f-${now.toISOString().slice(0, 10)}-${shortId(now)}`;
   const sourceHash = await hashSourceDocument(deps.root, args.sourceDocument);
-  const content = renderFindingsArtifact({
-    artifactId,
-    created: now.toISOString(),
-    sourceDocument: args.sourceDocument,
-    sourceHash,
-    findings: args.findings,
-    actor: args.actor,
-  });
 
-  await mkdir(dirname(absPath), { recursive: true });
-  await writeFile(absPath, content, { encoding: "utf8", flag: "wx" });
+  // Same collision guard as writeArtifact: `flag: "wx"` plus a bounded
+  // re-mint on EEXIST. The default id is clock-derived, so same-tick calls
+  // share a base and get `-2`, `-3`, ... suffixes from mintFindingsId.
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_MINT_ATTEMPTS; attempt++) {
+    const artifactId = args.artifactId ?? (await mintFindingsId(deps.root, artifactsDir, baseId));
+    const relPath = `${artifactsDir}/${artifactId}-findings.md`;
 
-  return { artifactPath: relPath };
+    if (!relPath.includes("/artifacts/") || relPath.includes("context/legal/")) {
+      throw new AppendOnlyViolationError(
+        relPath,
+        "create",
+        "findings must be written under artifacts/",
+      );
+    }
+    // Runs the append-only check (create is allowed; this also rejects bad shapes).
+    assertAppendOnly(relPath, "create");
+
+    const absPath = resolveContextPath(relPath, deps.root);
+    const content = renderFindingsArtifact({
+      artifactId,
+      created: now.toISOString(),
+      sourceDocument: args.sourceDocument,
+      sourceHash,
+      findings: args.findings,
+      actor: args.actor,
+    });
+
+    try {
+      await mkdir(dirname(absPath), { recursive: true });
+      await writeFile(absPath, content, { encoding: "utf8", flag: "wx" });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "EEXIST") {
+        if (args.artifactId) {
+          throw new AppendOnlyViolationError(
+            relPath,
+            "create",
+            "a findings artifact already exists at this path",
+          );
+        }
+        lastErr = e;
+        continue; // re-list, re-mint, re-attempt
+      }
+      throw e;
+    }
+
+    return { artifactPath: relPath };
+  }
+  throw new AppendOnlyViolationError(
+    artifactsDir,
+    "create",
+    `could not mint a collision-free findings id after ${MAX_MINT_ATTEMPTS} attempts: ${(lastErr as Error)?.message ?? "unknown"}`,
+  );
 }
+
+const MAX_MINT_ATTEMPTS = 8;
 
 function shortId(now: Date): string {
   return now.getTime().toString(36).slice(-6);
 }
 
-async function assertDoesNotExist(absPath: string, relPath: string): Promise<void> {
+/** `base` if unused in artifacts/, else `base-<n>` with n one past the highest taken (bare base = 1). */
+async function mintFindingsId(
+  root: string,
+  artifactsDirLogical: string,
+  base: string,
+): Promise<string> {
+  let entries: string[] = [];
   try {
-    await readFile(absPath, "utf8");
+    entries = await readdir(resolveContextPath(artifactsDirLogical, root));
   } catch {
-    return; // does not exist — good
+    entries = []; // directory doesn't exist yet — first artifact
   }
-  throw new AppendOnlyViolationError(
-    relPath,
-    "create",
-    "a findings artifact already exists at this path",
+  const re = new RegExp(
+    `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-(\\d+))?-findings\\.md$`,
   );
+  let max = 0;
+  for (const e of entries) {
+    const m = re.exec(e);
+    if (m) max = Math.max(max, m[1] ? parseInt(m[1], 10) : 1);
+  }
+  return max === 0 ? base : `${base}-${max + 1}`;
 }
 
 async function hashSourceDocument(root: string, sourceDocument: string): Promise<string> {

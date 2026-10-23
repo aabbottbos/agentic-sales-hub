@@ -236,17 +236,15 @@ describe("loader writeArtifact/appendOutcome — per-opportunity queue integrati
         id: `writer-${i}`,
       }));
 
-      // writeFindings mints its default artifact id from the injected clock
-      // with no mint-and-retry loop (unlike writeArtifact), so concurrent
-      // calls under a frozen `now` need explicit distinct ids here — that's a
-      // property of writeFindings' id scheme, not of the queue under test.
-      const findingsCalls = findingsActors.map((actor, i) =>
+      // Default ids under a frozen `now`: every call starts from the same
+      // clock-derived base, so this also proves writeFindings' mint-and-retry
+      // (plan 007) — before it, the second call threw AppendOnlyViolationError.
+      const findingsCalls = findingsActors.map((actor) =>
         loader.writeFindings({
           accountSlug: ACCOUNT,
           crmId: OPP,
           sourceDocument: sourceDoc,
           findings: [blockerFinding],
-          artifactId: `f-concurrent-${i}`,
           actor,
         }),
       );
