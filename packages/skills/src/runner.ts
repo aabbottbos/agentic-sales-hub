@@ -91,6 +91,7 @@ export async function runSkill(
 
   // Output contract.
   let citationsValid: boolean | undefined;
+  let generationCitations: GenerationCitationCheck | undefined;
   if (def.tier === "retrieval") {
     ctx.loader.assertValidRetrievalResult(
       result.output as Parameters<typeof ctx.loader.assertValidRetrievalResult>[0],
@@ -112,7 +113,8 @@ export async function runSkill(
       );
     }
     if (def.output.requires_citations) {
-      citationsValid = await checkGenerationCitations(ctx, result.output);
+      generationCitations = await checkGenerationCitations(ctx, result.output);
+      citationsValid = generationCitations.failures.length === 0;
     }
   }
 
@@ -125,9 +127,10 @@ export async function runSkill(
       );
     }
     if (citationsValid === false) {
-      throw new Error(
-        `${id}: refusing to persist — citation validity check failed; ` +
-          `writeArtifact() is not called for output whose citations do not resolve`,
+      throw new CitationValidityError(
+        id,
+        generationCitations?.total ?? 0,
+        generationCitations?.failures ?? [],
       );
     }
     if (!ctx.actor) {
@@ -284,16 +287,63 @@ async function checkRetrievalCitations(ctx: RunContext, hits: RetrievalLike[]): 
   return true;
 }
 
+export interface CitationFailure {
+  path: string;
+  span: [number, number];
+  quote?: string;
+  reason: string;
+}
+
+interface GenerationCitationCheck {
+  total: number;
+  failures: CitationFailure[];
+}
+
+/**
+ * Thrown by `runSkill` when a write-grant generation skill's output fails the
+ * citation-validity check, so `writeArtifact()` is never called. Carries every
+ * unresolved citation (not just the first) so a caller — the eval runner in
+ * particular — can record the gate failure with a diagnosis instead of
+ * crashing.
+ */
+export class CitationValidityError extends Error {
+  readonly skillId: string;
+  readonly total: number;
+  readonly failures: CitationFailure[];
+
+  constructor(skillId: string, total: number, failures: CitationFailure[]) {
+    super(
+      `${skillId}: refusing to persist — citation validity check failed ` +
+        `(${failures.length}/${total} unresolved); ` +
+        `writeArtifact() is not called for output whose citations do not resolve`,
+    );
+    this.name = "CitationValidityError";
+    this.skillId = skillId;
+    this.total = total;
+    this.failures = failures;
+  }
+}
+
 /** Generation citation validity = resolve-only over the flattened citation set. */
-async function checkGenerationCitations(ctx: RunContext, output: unknown): Promise<boolean> {
-  for (const c of flattenCitations(output)) {
+async function checkGenerationCitations(
+  ctx: RunContext,
+  output: unknown,
+): Promise<GenerationCitationCheck> {
+  const citations = flattenCitations(output);
+  const failures: CitationFailure[] = [];
+  for (const c of citations) {
     try {
       await ctx.loader.resolveCitation({ path: c.path, span: c.span });
-    } catch {
-      return false;
+    } catch (err) {
+      failures.push({
+        path: c.path,
+        span: c.span,
+        ...(typeof c.quote === "string" ? { quote: c.quote } : {}),
+        reason: err instanceof Error ? err.message : String(err),
+      });
     }
   }
-  return true;
+  return { total: citations.length, failures };
 }
 
 function mustParam(v: string | undefined, name: string): string {

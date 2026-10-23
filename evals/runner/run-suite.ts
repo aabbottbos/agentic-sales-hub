@@ -11,7 +11,7 @@ import {
   type Finding,
   type RetrievalHit,
 } from "@agentic-sales-hub/context-core";
-import { runSkill, type SummaryOutput } from "@agentic-sales-hub/skills";
+import { CitationValidityError, runSkill, type SummaryOutput } from "@agentic-sales-hub/skills";
 // Deep import into the built package (not the public surface) to reach
 // `_setClientForTest` — the ONE sanctioned seam llm.ts itself exports for
 // swapping the real Anthropic client with a deterministic fake (see that
@@ -649,19 +649,44 @@ async function runCallPrepSuite(): Promise<SuiteResult> {
     const { tmpDir, root } = await scratchCorpus();
     try {
       const loader = await createLoader({ repoRoot: REPO_ROOT, root });
-      const result = await runSkill(
-        "call-prep",
-        {
-          account_slug: c.input.account_slug,
-          opp_id: c.input.opp_id,
-          ...(c.input.meeting_context ? { meeting_context: c.input.meeting_context } : {}),
-        },
-        {
-          loader,
-          scopeParams: toScopeParams(c.scope_params),
-          actor: { type: "system", id: "eval-runner" },
-        },
-      );
+      let result;
+      try {
+        result = await runSkill(
+          "call-prep",
+          {
+            account_slug: c.input.account_slug,
+            opp_id: c.input.opp_id,
+            ...(c.input.meeting_context ? { meeting_context: c.input.meeting_context } : {}),
+          },
+          {
+            loader,
+            scopeParams: toScopeParams(c.scope_params),
+            actor: { type: "system", id: "eval-runner" },
+          },
+        );
+      } catch (err) {
+        // runSkill refuses to persist a brief whose citations don't resolve.
+        // That is the hard gate firing — record it as a scored FAIL with the
+        // unresolved citations, rather than crashing the whole eval run.
+        if (!(err instanceof CitationValidityError)) throw err;
+        const validity = err.total ? (err.total - err.failures.length) / err.total : 0;
+        cases.push({
+          id: c.id,
+          metrics: { citation_validity: round(validity) },
+          gates: { citation_validity: "FAIL" },
+          injectionBlocked: null,
+          notes: [
+            `runSkill refused to persist: ${err.failures.length}/${err.total} citation(s) unresolved; rubric not scored`,
+            ...err.failures.map(
+              (f) =>
+                `unresolved ${f.path} ${JSON.stringify(f.span)}` +
+                (f.quote ? ` quote=${JSON.stringify(f.quote.slice(0, 160))}` : "") +
+                ` — ${f.reason}`,
+            ),
+          ],
+        });
+        continue;
+      }
       const output = result.output as BriefOutputForEval;
 
       const flatForScoring = [

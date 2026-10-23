@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { createLoader, type ContextLoader } from "@agentic-sales-hub/context-core";
 import { listSkills, loadSkill } from "./registry.js";
 import * as registry from "./registry.js";
-import { runSkill, validateInput, flattenCitations } from "./runner.js";
+import { runSkill, validateInput, flattenCitations, CitationValidityError } from "./runner.js";
 import { normalizeWithMap } from "./impl/sow-review.js";
 import * as llm from "./impl/llm.js";
 import type { Finding, RetrievalHit } from "@agentic-sales-hub/context-core";
@@ -447,13 +447,22 @@ describe("runSkill generation branch (call-prep, stubbed, scratch corpus)", () =
       vi.spyOn(llm, "complete").mockResolvedValue(stub);
       const writeArtifactSpy = vi.spyOn(scratchLoader, "writeArtifact");
 
-      await expect(
-        runSkill(
-          "call-prep",
-          { account_slug: "acme-logistics", opp_id: OPP },
-          { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
-        ),
-      ).rejects.toThrow(/citation validity/i);
+      const err = await runSkill(
+        "call-prep",
+        { account_slug: "acme-logistics", opp_id: OPP },
+        { loader: scratchLoader, scopeParams: { accountSlug: "acme-logistics", oppId: OPP } },
+      ).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(CitationValidityError);
+      expect((err as Error).message).toMatch(/citation validity/i);
+      const { total, failures } = err as CitationValidityError;
+      expect(total).toBe(1);
+      expect(failures).toHaveLength(1);
+      expect(failures[0]).toMatchObject({
+        path: "context/org/company.md",
+        quote: "this exact phrase does not appear anywhere in the corpus",
+      });
+      expect(failures[0]!.reason).toMatch(/unresolvable/i);
 
       expect(writeArtifactSpy).not.toHaveBeenCalled();
     } finally {
