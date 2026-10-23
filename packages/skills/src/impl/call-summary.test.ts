@@ -22,10 +22,79 @@ describe("llm seam", () => {
     const args: CompleteArgs = {
       system: "s",
       user: "u",
-      model: "claude-sonnet-5",
+      model: "claude-sonnet-5-5",
       maxTokens: 10,
     };
-    expect(args.model).toBe("claude-sonnet-5");
+    expect(args.model).toBe("claude-sonnet-5-5");
+  });
+
+  describe("request shape per model (plan 008)", () => {
+    const text = (t: string) => [{ type: "text", text: t }];
+    function stubClient(response: Record<string, unknown>) {
+      const calls: { path: "messages" | "beta"; params: Record<string, unknown> }[] = [];
+      const create = (path: "messages" | "beta") => (params: Record<string, unknown>) => {
+        calls.push({ path, params });
+        return Promise.resolve({ model: params.model, stop_reason: "end_turn", ...response });
+      };
+      llm._setClientForTest({
+        messages: { create: create("messages") },
+        beta: { messages: { create: create("beta") } },
+      });
+      return calls;
+    }
+    const args = (model: string): CompleteArgs => ({
+      system: "s",
+      user: "u",
+      model,
+      maxTokens: 10,
+    });
+
+    afterEach(() => {
+      llm._setClientForTest(null);
+      vi.restoreAllMocks();
+    });
+
+    it("claude-sonnet-5-5: beta path, between_tools at effort high, server-side fallback", async () => {
+      const calls = stubClient({ content: text("ok") });
+      expect(await complete(args("claude-sonnet-5-5"))).toBe("ok");
+      expect(calls).toHaveLength(1);
+      expect(calls[0]!.path).toBe("beta");
+      expect(calls[0]!.params).toMatchObject({
+        model: "claude-sonnet-5-5",
+        thinking: { type: "between_tools" },
+        output_config: { effort: "high" },
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      });
+    });
+
+    it("claude-sonnet-5 (the judge): standard path, thinking disabled, no fallback", async () => {
+      const calls = stubClient({ content: text("ok") });
+      await complete(args("claude-sonnet-5"));
+      expect(calls[0]!.path).toBe("messages");
+      expect(calls[0]!.params.thinking).toEqual({ type: "disabled" });
+      expect(calls[0]!.params).not.toHaveProperty("fallbacks");
+      expect(calls[0]!.params).not.toHaveProperty("output_config");
+    });
+
+    it("throws (without retrying) on a refusal, naming the category", async () => {
+      const calls = stubClient({
+        content: [],
+        stop_reason: "refusal",
+        stop_details: { type: "refusal", category: "general_harms" },
+      });
+      await expect(complete(args("claude-sonnet-5-5"))).rejects.toThrow(
+        /refusal category: general_harms/,
+      );
+      expect(calls).toHaveLength(1);
+    });
+
+    it("returns a fallback-served answer and warns which model served it", async () => {
+      stubClient({ content: text("ok"), model: "claude-sonnet-5" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(await complete(args("claude-sonnet-5-5"))).toBe("ok");
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/served by claude-sonnet-5\b/));
+    });
   });
 });
 

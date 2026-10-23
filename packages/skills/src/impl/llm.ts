@@ -9,7 +9,7 @@ export interface CompleteArgs {
   system: string;
   user: string;
   model: string;
-  /** Cap on the visible answer. Thinking is disabled, so this is not spent on reasoning. */
+  /** Cap on the visible answer. Thinking is off, so this is not spent on reasoning. */
   maxTokens: number;
   /**
    * Only sent to the API when set. `claude-sonnet-5` deprecates `temperature`
@@ -18,6 +18,9 @@ export interface CompleteArgs {
    */
   temperature?: number;
 }
+
+/** Models that take `thinking: {type: "between_tools"}` instead of `disabled` (plan 008). */
+const BETWEEN_TOOLS_MODELS = new Set(["claude-sonnet-5-5"]);
 
 let client: Anthropic | null = null;
 
@@ -37,21 +40,45 @@ function getClient(): Anthropic {
 /**
  * One non-streaming completion. Returns the concatenated text of the response.
  *
- * Thinking is explicitly disabled: `claude-sonnet-5` runs extended thinking by
- * default and, for a structured-extraction or judging prompt, will otherwise
- * spend the whole `max_tokens` budget on a thinking block and return no text
+ * Thinking is explicitly off: these models run extended thinking by default
+ * and, for a structured-extraction or judging prompt, will otherwise spend the
+ * whole `max_tokens` budget on a thinking block and return no text
  * (`stop_reason: max_tokens`, content `[{type:"thinking"}]`). These tasks want
  * the answer, not the reasoning.
+ *
+ * `claude-sonnet-5` turns it off with `disabled`. `claude-sonnet-5-5` rejects
+ * `disabled` (400) and takes `between_tools`, which is valid only at effort
+ * `high` or below and only on that model — so effort is pinned to `high`
+ * (levels were recalibrated from Sonnet 5; set explicitly, not defaulted). The
+ * Sonnet 5.5 path also opts into server-side refusal fallback, which retries
+ * `cyber`/`frontier_llm` declines on Sonnet 5.
  */
 async function once(args: CompleteArgs): Promise<string> {
-  const res = await getClient().messages.create({
+  const base = {
     model: args.model,
     max_tokens: args.maxTokens,
-    thinking: { type: "disabled" },
     ...(args.temperature !== undefined ? { temperature: args.temperature } : {}),
     system: args.system,
-    messages: [{ role: "user", content: args.user }],
-  });
+    messages: [{ role: "user" as const, content: args.user }],
+  };
+  const res = BETWEEN_TOOLS_MODELS.has(args.model)
+    ? await getClient().beta.messages.create({
+        ...base,
+        // SDK 0.124 doesn't type `between_tools` yet; the API accepts it.
+        thinking: { type: "between_tools" } as unknown as Anthropic.Beta.BetaThinkingConfigParam,
+        output_config: { effort: "high" },
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      })
+    : await getClient().messages.create({ ...base, thinking: { type: "disabled" } });
+
+  if (res.stop_reason === "refusal") {
+    const category = res.stop_details?.category ?? "unspecified";
+    throw new Error(`${args.model} declined the request (refusal category: ${category})`);
+  }
+  if (res.model && res.model !== args.model) {
+    console.warn(`[llm] ${args.model} request was served by ${res.model} (refusal fallback)`);
+  }
   return res.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)

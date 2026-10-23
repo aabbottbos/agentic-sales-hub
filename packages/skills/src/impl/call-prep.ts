@@ -17,7 +17,7 @@ interface CallPrepInput {
   meeting_context?: string;
 }
 
-const MODEL = "claude-sonnet-5";
+const MODEL = "claude-sonnet-5-5";
 // call-prep synthesizes across the whole opportunity's context (every in-scope
 // file, not one note), so the return object tends to run larger than
 // call-summary's single-document summary. Same shape of budget, more headroom.

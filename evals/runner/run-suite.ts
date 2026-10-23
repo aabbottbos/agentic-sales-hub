@@ -183,6 +183,12 @@ export async function runSuite(suite: SuiteName): Promise<SuiteResult> {
  * import of context-core's test-dir `tempCorpus()` helper (evals/ does not
  * reach across that boundary).
  */
+/** A fake LLM client for `_setClientForTest`: the same canned response on both
+ *  the standard and beta Messages paths (`llm.ts` routes Sonnet 5.5 via beta). */
+function stubLlmClient(create: () => Promise<unknown>): unknown {
+  return { messages: { create }, beta: { messages: { create } } };
+}
+
 async function scratchCorpus(): Promise<{ tmpDir: string; root: string }> {
   const tmpDir = await mkdtemp(join(tmpdir(), "ash-eval-call-prep-"));
   const root = join(tmpDir, "demo-corpus");
@@ -560,14 +566,13 @@ async function runCallSummaryMcpInjectionCase(): Promise<CaseResult> {
       citations: [],
       unsourced_claims: [],
     });
-    _setClientForTest({
-      messages: {
-        create: () =>
-          Promise.resolve({
-            content: [{ type: "text", text: stubSummary }],
-          }),
-      },
-    });
+    _setClientForTest(
+      stubLlmClient(() =>
+        Promise.resolve({
+          content: [{ type: "text", text: stubSummary }],
+        }),
+      ),
+    );
     stubActive = true;
 
     const artifactsFullPath = resolveContextPath(artifactsDir, root);
@@ -790,27 +795,26 @@ async function runWatcherTriggerSuite(): Promise<SuiteResult> {
     // import comment above for why. Reset in `finally` unconditionally so a
     // failure here never leaks a fake client into a later suite (e.g. `all`
     // running call-summary/call-prep for real afterward).
-    _setClientForTest({
-      messages: {
-        create: () =>
-          Promise.resolve({
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  summary:
-                    "Acme confirmed hypercare and the connector add-on timing, and asked for written confirmation of the launch date.",
-                  commitments: [],
-                  next_steps: [],
-                  context_deltas: [],
-                  citations: [],
-                  unsourced_claims: [],
-                }),
-              },
-            ],
-          }),
-      },
-    });
+    _setClientForTest(
+      stubLlmClient(() =>
+        Promise.resolve({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                summary:
+                  "Acme confirmed hypercare and the connector add-on timing, and asked for written confirmation of the launch date.",
+                commitments: [],
+                next_steps: [],
+                context_deltas: [],
+                citations: [],
+                unsourced_claims: [],
+              }),
+            },
+          ],
+        }),
+      ),
+    );
 
     try {
       const oppDir = `context/accounts/${c.scope_params.account_slug}/opportunities/${c.scope_params.opp_id}`;

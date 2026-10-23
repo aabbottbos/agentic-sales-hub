@@ -15,7 +15,7 @@ interface CallSummaryInput {
   meeting_path: string;
 }
 
-const MODEL = "claude-sonnet-5";
+const MODEL = "claude-sonnet-5-5";
 // A full structured summary of a meeting note (prose recap + commitments +
 // next_steps + context_deltas + citations, all as JSON) runs 3-5k tokens on the
 // corpus notes. 2048 truncated mid-object; 6144 leaves headroom.
