@@ -2,8 +2,9 @@
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
 Last updated: **2026-10-23** (Intent 005, the team steel thread, **shipped to
-`main`** via PR #23, `abd59fe`. Full-suite eval result
-`evals/results/2026-10-23-bd991b6.json`: all hard gates pass, no regression.
+`main`** via PR #23, `abd59fe`. Plan 006, taint-ledger hardening, followed
+it; latest eval result `evals/results/2026-10-23-6b82567.json`: all hard
+gates pass, no regression.
 **Priority call, 2026-10-23:** keep building capabilities as fast as possible.
 The North Star's October writeup + demo video is deferred, not cancelled.
 Next up: see "Next action" below.)
@@ -12,20 +13,20 @@ Next up: see "Next action" below.)
 
 Build order agreed 2026-10-23 (each its own branch + PR):
 
-1. **Taint-ledger short-phrase hardening** (follow-up 12), T1. Most urgent:
-   the inbound watcher now runs `call-summary` on `inbound/**` unattended.
-   Plan first (`docs/plans/006-...` or the next free number), and add new
-   injection eval cases for reworded and short lifted phrases.
+1. ~~**Taint-ledger short-phrase hardening**~~ (follow-up 12): **done**, plan
+   006 (`docs/plans/006-taint-ledger-hardening.md`). It also closed follow-up
+   14 (the eval baseline tie-break).
 2. **`writeFindings` mint-and-retry** (follow-up 13), T1. Small.
-3. **Eval baseline tie-break** (follow-up 14), T1. Small.
-4. **Move skills from `claude-sonnet-5` to Sonnet 5.5**, T1. Do 3 calibration
+3. **Move skills from `claude-sonnet-5` to Sonnet 5.5**, T1. Do 3 calibration
    runs; citation validity must stay at 1.00.
-5. **Intent 006: `proposal-draft`** (WI-3), T2.
-6. **Intent 007: corpus expansion** with ≥2 closed deals and populated
+4. **Intent 007: `proposal-draft`** (WI-3), T2. Plan 006 claimed number 006.
+5. **Intent 008: corpus expansion** with ≥2 closed deals and populated
    `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
-7. **Intent 008: the compounding loop.** It depends on 007's closed deals.
-8. **Intent 009: adoption layer** (WI-5). Needs the license and public-repo
+6. **Intent 009: the compounding loop.** It depends on 008's closed deals.
+7. **Intent 010: adoption layer** (WI-5). Needs the license and public-repo
    decisions first.
+8. **Taint provenance on derived artifacts** (follow-up 16), T2. Slot it in
+   before the compounding loop starts relying on artifacts as context.
 
 ## Intent 005 — team steel thread — SHIPPED (PR #23, `abd59fe`)
 
@@ -303,20 +304,19 @@ All six Phase 0 intent success criteria are met.
 11. **Intent 005's eval regression run:** done. It turned out the old API
     key had been revoked. After replacing it, the full run passed
     (`evals/results/2026-10-23-bd991b6.json`) and 005 merged as PR #23.
-12. **Taint-ledger short-phrase matching is a genuine, if narrow, gap** —
-    surfaced during Task 9's review (`packages/context-core/src/quarantine/taint.ts`,
-    the `match()` function's case 3). The ledger catches long (8-word)
-    shingle overlaps and whole-shingle substrings reliably, but its
-    3–7-word "short lifted phrase" branch does plain substring containment
-    against normalized shingles — common short phrases risk false positives,
-    and a phrase reworded just enough to cross shingle boundaries risks a
-    false negative. Pre-existing (not introduced by intent 005 — Task 9's
-    `assertNotTainted` just calls the existing `match()`), and not a blocker
-    for the steel thread's own scope, but worth a dedicated look (e.g.
-    stemming/normalization tuning, or a length-scaled threshold) next time
-    anyone is in the quarantine/taint code, since it's the one hook standing
-    between an untrusted `inbound/**` document and a laundered write into
-    `context/accounts/**`.
+12. **Taint-ledger short-phrase matching:** done (plan 006). `match()` now
+    has two profiles:
+    - **`strict`** is the default and is what the hook uses. It adds rule 4:
+      a distinctive 6-word run with ≥3 content words, lifted from an inbound
+      doc, anywhere in a longer value.
+    - **`standard`** is used by `assertNotTainted` on the MCP/watcher persist
+      path, whose summaries legitimately echo their own source.
+
+    Both profiles now match on word boundaries, and a whole short phrase
+    needs ≥3 content words. Calibration over 1,586 legitimate paragraphs
+    found no new false positives outside `legal/**` (the numbers are in the
+    plan doc). Paraphrase is still undetectable by verbatim matching; see
+    follow-up 16.
 13. **`writeFindings`'s default artifact-id minting has no collision-retry
     loop** — surfaced while writing `42e3aef`'s queue-interleaving test
     (`packages/context-core/src/findings/write-findings.ts`'s `shortId()`,
@@ -332,13 +332,11 @@ All six Phase 0 intent success criteria are met.
     Not fixed here (out of scope for the actor/queue fix that found it); a
     small follow-up would copy `writeArtifact`'s mint-and-retry loop into
     `write-findings.ts`.
-14. **The eval baseline picker breaks ties by filename.**
-    `latestCommittedResult()` (`evals/runner/cli.ts`) sorts result filenames
-    lexically, so when two results share a date, the one with the larger
-    short sha wins, not the later commit. On 10-23 this compared against
-    `2026-09-11-f82c7a7` instead of `59e5e45`. Fix it by adding a
-    `generated_at` timestamp to the report and sorting on it. Until then, the
-    bug only bites if two results get committed on the same day.
+14. **Eval baseline tie-break:** done (plan 006 PR). Same-date result files
+    now order by the commit that first added them
+    (`latestResultFile()` in `evals/runner/compare.ts`; an uncommitted file
+    counts as newest). No report-format change was needed, because CI checks
+    out with `fetch-depth: 0`.
 15. **`call-prep` occasionally misquotes a citation.** One full run on 10-23
     produced an unresolvable citation; 3 direct reruns plus 2 later full runs
     (local and CI) were clean. The gate catches it, and since `bd991b6` it is
@@ -346,6 +344,15 @@ All six Phase 0 intent success criteria are met.
     happens. If it keeps recurring, consider having the impl retry once on an
     unresolvable quote before failing (a skill-contract question, so check
     the tier).
+16. **Taint provenance on artifacts derived from inbound** (T2: schema plus
+    skill contract). This is the real fix for summary laundering. A
+    `call-summary` of an inbound transcript passes the `standard` profile,
+    which allows short echoes and can't see a paraphrase. Once persisted, it
+    reads as ordinary accumulating context to `call-prep`. Proposal: an
+    artifact whose citations resolve into `inbound/**` carries a `tainted_by`
+    field, and downstream skills wrap those artifacts in untrusted-content
+    delimiters, just as `readInbound` does. Do this before the compounding
+    loop starts reusing artifacts as evidence.
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
@@ -358,9 +365,9 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
 | **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (PR #21, `98a6e74`) |
 | **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **done** (PR #23, `abd59fe`) |
-| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 006 (renumbered from 005) | not started |
-| **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 007 (renumbered from 006) | not started — scope may shrink or merge with intent 005, per open question 2 |
-| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 008 (renumbered from 007) | not started |
+| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 007 (006 taken by plan 006, taint hardening) | not started |
+| **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 008 | not started — split the remaining MCP scope into its own intent |
+| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 010 (009 = compounding loop) | not started |
 
 **Note on renumbering:** intent doc numbers are assigned at filing time and
 are not renumbered after the fact (005 is permanently "team steel thread").
