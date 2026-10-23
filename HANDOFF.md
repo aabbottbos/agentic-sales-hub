@@ -11,20 +11,24 @@ Next up: see "Next action" below.)
 
 ## Next action
 
-Build order agreed 2026-10-23 (each its own branch + PR):
+Build order agreed 2026-10-23 (each its own branch + PR). Doc numbers
+(`docs/intent/`, `docs/plans/`) share one sequence and are assigned **at
+filing time**: take the next free number then. Don't pre-assign them here,
+because T1 plans consume numbers too (006 = taint hardening, 007 = findings
+id retry).
 
 1. ~~**Taint-ledger short-phrase hardening**~~ (follow-up 12): **done**, plan
-   006 (`docs/plans/006-taint-ledger-hardening.md`). It also closed follow-up
-   14 (the eval baseline tie-break).
-2. **`writeFindings` mint-and-retry** (follow-up 13), T1. Small.
+   006. It also closed follow-up 14 (the eval baseline tie-break).
+2. ~~**`writeFindings` mint-and-retry**~~ (follow-up 13): **done**, plan 007.
 3. **Move skills from `claude-sonnet-5` to Sonnet 5.5**, T1. Do 3 calibration
    runs; citation validity must stay at 1.00.
-4. **Intent 007: `proposal-draft`** (WI-3), T2. Plan 006 claimed number 006.
-5. **Intent 008: corpus expansion** with ≥2 closed deals and populated
+4. **`proposal-draft`** (WI-3), T2.
+5. **Corpus expansion** (WI-4), T2, with ≥2 closed deals and populated
    `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
-6. **Intent 009: the compounding loop.** It depends on 008's closed deals.
-7. **Intent 010: adoption layer** (WI-5). Needs the license and public-repo
-   decisions first.
+6. **The compounding loop**, T2. It depends on corpus expansion's closed
+   deals.
+7. **Adoption layer** (WI-5), T2. Needs the license and public-repo decisions
+   first.
 8. **Taint provenance on derived artifacts** (follow-up 16), T2. Slot it in
    before the compounding loop starts relying on artifacts as context.
 
@@ -317,21 +321,11 @@ All six Phase 0 intent success criteria are met.
     found no new false positives outside `legal/**` (the numbers are in the
     plan doc). Paraphrase is still undetectable by verbatim matching; see
     follow-up 16.
-13. **`writeFindings`'s default artifact-id minting has no collision-retry
-    loop** — surfaced while writing `42e3aef`'s queue-interleaving test
-    (`packages/context-core/src/findings/write-findings.ts`'s `shortId()`,
-    derived from the injected clock: `now.getTime().toString(36).slice(-6)`).
-    Unlike `writeArtifact`'s `mintNextId` + `MAX_MINT_ATTEMPTS`/EEXIST-retry
-    pattern (`write-path.ts`), concurrent `writeFindings` calls under a
-    frozen clock deterministically collide and throw
-    `AppendOnlyViolationError`. Confirmed pre-existing on `main`, not
-    introduced by intent 005 — Task 6's queue wrapping doesn't touch id
-    minting, it only serializes calls, so this can still surface under a
-    real (non-frozen) clock if two `writeFindings` calls land in the same
-    process-lifetime queue window with a coarse enough clock resolution.
-    Not fixed here (out of scope for the actor/queue fix that found it); a
-    small follow-up would copy `writeArtifact`'s mint-and-retry loop into
-    `write-findings.ts`.
+13. **`writeFindings` id minting:** done (plan 007). A same-tick default id
+    now re-mints as `<base>-2`, `-3`, and so on: it lists `artifacts/`, then
+    writes with `flag: "wx"` plus bounded retry on EEXIST, the same pattern
+    as `writeArtifact`. The queue integration test no longer needs explicit
+    ids to work around the collision.
 14. **Eval baseline tie-break:** done (plan 006 PR). Same-date result files
     now order by the commit that first added them
     (`latestResultFile()` in `evals/runner/compare.ts`; an uncommitted file
@@ -365,9 +359,9 @@ Strict dependency order. Each WI is its own committed intent → spec → plan �
 | **WI-1** | Tenancy seam — `config.ts` + `resolveContextRoot()`; `git mv context/ → examples/demo-corpus/`; `ash.config.json`; `check:context-empty` | T2 | 003 | **done** (PR #17) |
 | **WI-2** | `call-prep` + the write path — `writeArtifact()` / `appendOutcome()`; `brief-output.json`, `outcome-record.json`; protect-paths denies direct writes to `**/artifacts/**` | T2 | 004 | **done** (PR #21, `98a6e74`) |
 | **Team steel thread** | Actor identity; per-opportunity write queue; `packages/mcp-agentic-sales-hub` (2 tools: `call-summary`, `call-prep`); in-process file watcher on `inbound/**` → auto-triggers `call-summary` | T2 | **005** | **done** (PR #23, `abd59fe`) |
-| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | 007 (006 taken by plan 006, taint hardening) | not started |
-| **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | 008 | not started — split the remaining MCP scope into its own intent |
-| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | 010 (009 = compounding loop) | not started |
+| **WI-3** | `proposal-draft` — built-in default structure; **new hard gate: no uncited price/discount/delivery commitment** | T2 | next free at filing | not started |
+| **WI-4** | Remaining `packages/mcp-agentic-sales-hub` scope (beyond the steel thread) + §10 corpus expansion (3 more opportunities, ~12 meeting notes) | T2 | next free at filing | not started — split the remaining MCP scope into its own intent |
+| **WI-5** | Adoption layer — `/onboard` setup skill; 3 knob schemas (`voice`/`playbook`/`output-template`); `skills:sync` → `skills:compile` w/ provenance header; `routeIntake()` + its default-deny eval case; `pnpm init:context`; README rewrite (adoption path first) | T2 | next free at filing | not started |
 
 **Note on renumbering:** intent doc numbers are assigned at filing time and
 are not renumbered after the fact (005 is permanently "team steel thread").

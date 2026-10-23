@@ -135,6 +135,42 @@ describe("writeFindings", () => {
     }
   });
 
+  it("re-mints suffixed ids for same-tick default-id writes instead of colliding", async () => {
+    const { tmpDir, root } = await tempCorpus();
+    try {
+      const frozen = { root, registry, now: () => new Date("2026-09-18T12:00:00Z") };
+      const paths: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        const { artifactPath } = await writeFindings(
+          {
+            accountSlug: "fix-co",
+            crmId: OPP,
+            sourceDocument: sourceDoc,
+            findings: [blocker],
+            actor,
+          },
+          frozen,
+        );
+        paths.push(artifactPath);
+      }
+      const ids = paths.map((p) =>
+        p
+          .split("/")
+          .at(-1)!
+          .replace(/-findings\.md$/, ""),
+      );
+      const base = ids[0]!;
+      expect(base).toMatch(/^f-2026-09-18-[a-z0-9]{6}$/);
+      expect(ids).toEqual([base, `${base}-2`, `${base}-3`, `${base}-4`, `${base}-5`]);
+      for (const p of paths) {
+        const file = await readContextFile(p, { root, registry });
+        expect(file.frontmatter.kind).toBe("findings");
+      }
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a finding that fails its schema", async () => {
     const { tmpDir, root } = await tempCorpus();
     try {
