@@ -2,9 +2,12 @@
 
 Working-state notes for the next session. Not a spec — see `docs/` for those.
 Last updated: **2026-10-23** (Intent 005, the team steel thread, **shipped to
-`main`** via PR #23, `abd59fe`. Plan 006, taint-ledger hardening, followed
-it; latest eval result `evals/results/2026-10-23-6b82567.json`: all hard
-gates pass, no regression.
+`main`** via PR #23, `abd59fe`. Plans 006 (taint-ledger hardening, PR #25)
+and 007 (`writeFindings` id retry, PR #26, `e587398`) followed it; latest
+committed eval result `evals/results/2026-10-23-6b82567.json`: all hard gates
+pass, no regression. **Plan 008 (Sonnet 5.5) is in progress** on branch
+`feat/008-sonnet-5-5`. It's pushed with no PR yet, and blocked on a decision
+about one call-prep misquote; see "Next action" item 3.
 **Priority call, 2026-10-23:** keep building capabilities as fast as possible.
 The North Star's October writeup + demo video is deferred, not cancelled.
 Next up: see "Next action" below.)
@@ -19,9 +22,31 @@ id retry).
 
 1. ~~**Taint-ledger short-phrase hardening**~~ (follow-up 12): **done**, plan
    006. It also closed follow-up 14 (the eval baseline tie-break).
-2. ~~**`writeFindings` mint-and-retry**~~ (follow-up 13): **done**, plan 007.
-3. **Move skills from `claude-sonnet-5` to Sonnet 5.5**, T1. Do 3 calibration
-   runs; citation validity must stay at 1.00.
+2. ~~**`writeFindings` mint-and-retry**~~ (follow-up 13): **done**, plan 007
+   (PR #26).
+3. **Move skills from `claude-sonnet-5` to Sonnet 5.5** (plan 008,
+   `docs/plans/008-sonnet-5-5.md`). **In progress, branch
+   `feat/008-sonnet-5-5`.**
+   - **Done:** `call-summary`/`call-prep` are on `claude-sonnet-5-5`. `llm.ts`
+     sends Sonnet 5.5 through the beta Messages path with
+     `thinking: {type: "between_tools"}` (`disabled` is a 400 on 5.5), effort
+     `high`, and server-side refusal fallback (`fallbacks: "default"`). It
+     throws a clear error on `stop_reason: "refusal"` and warns when a
+     fallback model served the request. The judge stays on `claude-sonnet-5`,
+     so the instrument doesn't change in the same PR.
+   - **Calibration:** 3x each suite, 2026-10-23. `call-summary` passed
+     citation validity 1.00 on 3/3 runs (rubric 3.67 / 4.0 / 2.67; the third
+     had one judge call fail, and the rubric is advisory). `call-prep` passed
+     1.00 on 2/3 runs (rubric 5.0 / 4.25). Its run 2 scored **0.958, FAIL**:
+     1 of 24 citations was a stitched quote (follow-up 15).
+   - **Pending decision before the PR**, chosen by the user:
+     - (a) **Recommended:** fix follow-up 15 first, with a bounded
+       regenerate-once in the impl when a quote isn't verbatim. The gate
+       stays unchanged, and it helps both models.
+     - (b) Try effort `medium`.
+     - (c) Ship as-is and track the rate.
+     After the decision: run the full suite with `--write-results`, open the
+     PR, and record the numbers in the plan doc.
 4. **`proposal-draft`** (WI-3), T2.
 5. **Corpus expansion** (WI-4), T2, with ≥2 closed deals and populated
    `outcomes.jsonl`. Split the remaining MCP scope into its own intent.
@@ -331,13 +356,23 @@ All six Phase 0 intent success criteria are met.
     (`latestResultFile()` in `evals/runner/compare.ts`; an uncommitted file
     counts as newest). No report-format change was needed, because CI checks
     out with `fetch-depth: 0`.
-15. **`call-prep` occasionally misquotes a citation.** One full run on 10-23
-    produced an unresolvable citation; 3 direct reruns plus 2 later full runs
-    (local and CI) were clean. The gate catches it, and since `bd991b6` it is
-    recorded as a FAIL instead of crashing the run. Track how often it
-    happens. If it keeps recurring, consider having the impl retry once on an
-    unresolvable quote before failing (a skill-contract question, so check
-    the tier).
+15. **`call-prep` occasionally misquotes a citation.** It has happened on
+    both models.
+    - **Sonnet 5:** 1 crashing run on 10-23 (before `bd991b6` made it a
+      recorded FAIL), then clean on 2 later full runs and on CI.
+    - **Sonnet 5.5:** 1 of 3 calibration runs.
+    - **Example (5.5):** it cited
+      `org/evidence/cs-midwest-freight.md` with the quote
+      `"6 weeks to 3.5 (down ~40%)"`. That stitches together the frontmatter
+      line `6 weeks to 3.5 weeks (down ~40%)` and the body text
+      `from 6 weeks to 3.5,`, so the quote appears nowhere in the file.
+    - **Effect:** the gate catches it correctly, but it makes the `evals` CI
+      check flaky.
+    - **Candidate fix:** when a quote isn't a verbatim substring of its
+      cited file, regenerate once, telling the model which quote failed,
+      before returning. Neither the gate nor the contract changes. Check the
+      tier: it's an impl-internal retry with no prompt or contract change,
+      so likely T1.
 16. **Taint provenance on artifacts derived from inbound** (T2: schema plus
     skill contract). This is the real fix for summary laundering. A
     `call-summary` of an inbound transcript passes the `standard` profile,
@@ -347,6 +382,17 @@ All six Phase 0 intent success criteria are met.
     field, and downstream skills wrap those artifacts in untrusted-content
     delimiters, just as `readInbound` does. Do this before the compounding
     loop starts reusing artifacts as evidence.
+17. **Move the rubric judge to Sonnet 5.5.** `evals/judge/judge-model.json`
+    is still `claude-sonnet-5`, deliberately kept apart from plan 008. Do it
+    as its own change with a few calibration runs, so rubric deltas stay
+    attributable.
+18. **Uncommitted local change: the `/doctor` trim of `CLAUDE.md`**
+    (2026-10-23). It removes the architecture directory tree, 7 standard
+    `pnpm` command rows, and 2 inventory bullets: 28 lines, about 0.4k est.
+    tokens, all derivable from the repo. It's sitting unstaged in the
+    working tree. Commit it as its own small PR, which runs `evals.yml`
+    because `CLAUDE.md` is eval-gated, or discard it with
+    `git checkout -- CLAUDE.md`.
 
 ## The work chain (amendment §6–§11, reordered by intent 005)
 
